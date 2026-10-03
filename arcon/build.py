@@ -14,6 +14,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from plan import Plan
+from texto import to_json, to_markdown
 from zdo import parse_items, stable_hash, world_objects
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -118,6 +119,10 @@ def main(world_dir, out_path):
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     os.makedirs(out_dir, exist_ok=True)
     open(out_path, "w", encoding="utf-8").write(template.replace("__DATA__", payload))
+    # Lo mismo sin navegador: JSON con los datos exactos y Markdown para leer de corrido.
+    with open(os.path.join(out_dir, "inventario.json"), "w", encoding="utf-8") as f:
+        json.dump(to_json(data, BASE, BASE_RADIUS), f, ensure_ascii=False, indent=1)
+    open(os.path.join(out_dir, "inventario.md"), "w", encoding="utf-8").write(to_markdown(data, BASE, BASE_RADIUS))
     # Huella del contenido (sin horas): el workflow no republica si es igual a la publicada.
     content = json.dumps({k: data[k] for k in ("containers", "stations", "plan", "names")}, sort_keys=True)
     open(os.path.join(out_dir, "estado.txt"), "w").write(hashlib.sha256(content.encode()).hexdigest() + "\n")

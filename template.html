@@ -114,6 +114,7 @@ header.panel { padding: 18px 20px 16px; display: grid; gap: 6px; }
 .chest ul { margin: 0; padding: 4px 14px 14px; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 3px 18px; font: .9rem var(--ui); }
 .chest li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid rgba(255, 214, 160, .07); padding-top: 3px; }
 .note { color: var(--muted); font: .88rem var(--ui); max-width: 65ch; margin: 0; }
+.note a { color: var(--yellow); }
 
 /* Plano de la base dentro de cada item: lo construido visto desde arriba, norte arriba. */
 .plan { margin: 4px 0 8px; border: 2px solid var(--frame); border-radius: 3px; background: #1b2a30;
@@ -174,6 +175,7 @@ header.panel { padding: 18px 20px 16px; display: grid; gap: 6px; }
     <h2 id="h-ch">Cofres uno por uno</h2>
     <div class="chests" id="chests"></div>
     <p class="note">Coordenadas del mapa (x, z). “Base” es todo lo que está a menos de 150 m de la base principal. No incluye lo que cada uno lleva encima, ni los trofeos colgados en soportes.</p>
+    <p class="note">También en texto: <a href="inventario.md">inventario.md</a> (resumen) y <a href="inventario.json">inventario.json</a> (datos exactos).</p>
   </section>
 </div>
 

@@ -29,6 +29,16 @@ en el servidor.
 
 La página queda en la dirección de GitHub Pages del repositorio (ver Settings → Pages).
 
+## Para leer sin navegador
+
+Además de la página, cada corrida publica:
+
+- [`inventario.md`](https://pancheim.github.io/inventario.md): resumen en texto
+  (totales por item, estaciones, cofres uno por uno). Sirve para leerlo de
+  corrido o pasárselo a un asistente.
+- [`inventario.json`](https://pancheim.github.io/inventario.json): los mismos
+  datos, exactos, para scripts o agentes.
+
 ## Cosas a saber
 
 - El servidor guarda aunque nadie juegue, así que la corrida programada compara
