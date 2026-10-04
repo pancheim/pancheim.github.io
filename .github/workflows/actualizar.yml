@@ -43,8 +43,13 @@ jobs:
           path: .icons
           key: iconos-${{ github.run_id }}
           restore-keys: iconos-
+      # El historial compara con lo publicado: se baja antes de armar (si no existe, arranca vacio).
       - name: Armar la pagina
-        run: python arcon/build.py world site/index.html
+        run: |
+          mkdir -p prev
+          curl -fsL '${{ steps.pages.outputs.base_url }}/inventario.json' -o prev/inventario.json || true
+          curl -fsL '${{ steps.pages.outputs.base_url }}/historial.json' -o prev/historial.json || true
+          PREV_DIR=prev python arcon/build.py world site/index.html
       # En las corridas programadas, si cofres, estaciones y plano son iguales a lo publicado,
       # no se republica (el servidor guarda aunque nadie juegue). A mano o al subir codigo, siempre.
       - name: Ver si cambio algo

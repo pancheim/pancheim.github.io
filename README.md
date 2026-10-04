@@ -38,6 +38,28 @@ Además de la página, cada corrida publica:
   corrido o pasárselo a un asistente.
 - [`inventario.json`](https://pancheim.github.io/inventario.json): los mismos
   datos, exactos, para scripts o agentes.
+- [`historial.json`](https://pancheim.github.io/historial.json): qué entró y
+  qué salió de los cofres entre una publicación y la siguiente (las últimas 50).
+
+## Qué más muestra
+
+Además de los cofres, la página lee del mundo:
+
+- **Jefes**: cuáles cayeron (las marcas globales del mundo) y cuántas
+  invocaciones alcanzan con lo guardado.
+- **Para sacar en la base**: miel de las colmenas, plumas de los nidos y
+  cultivos listos.
+- **Portales**: nombre, quién lo puso y si tiene pareja. Un espacio de más al
+  final del nombre ya los separa.
+- **Últimos cambios**: no hay base de datos; la página publicada es la memoria.
+  Antes de armar, el workflow baja el `inventario.json` y el `historial.json`
+  publicados y `arcon/historial.py` agrega la diferencia.
+- **Lugares** (oculto, porque es spoiler): altares, comerciantes y Forjas del
+  Potencial más cercanos a la base, y si esa zona ya se generó.
+- Seed y día del mundo, y de quién es cada tumba.
+
+Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (seed y jugadores),
+`_main.N.db2` (marcas globales y lugares) y los objetos de los chunks.
 
 ## Cosas a saber
 

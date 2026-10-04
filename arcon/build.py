@@ -13,6 +13,8 @@ import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+import historial
+from mundo import World
 from plan import Plan
 from texto import to_json, to_markdown
 from zdo import parse_items, stable_hash, world_objects
@@ -27,7 +29,7 @@ KIND = {"piece_chest_wood": "Cofre", "piece_chest": "Cofre reforzado", "piece_ch
 STATIONS = {"fermenter": "Fermentador", "smelter": "Fundición", "charcoal_kiln": "Horno de carbón",
             "blastfurnace": "Alto horno", "piece_spinningwheel": "Rueca", "windmill": "Molino",
             "eitrrefinery": "Refinería de eitr"}
-ITEMS, CONTENT, QUEUED, FUEL = (stable_hash(k) for k in ("items", "Content", "queued", "fuel"))
+ITEMS, CONTENT, QUEUED, FUEL, OWNER = (stable_hash(k) for k in ("items", "Content", "queued", "fuel", "ownerName"))
 STATION_HASH = {stable_hash(k): v for k, v in STATIONS.items()}
 # La base principal: lo que esta a menos de BASE_RADIUS metros cuenta como "base".
 BASE = (float(os.environ.get("BASE_X", 1290)), float(os.environ.get("BASE_Z", -195)))
@@ -44,18 +46,22 @@ def name_es(prefab):
 def build(world_dir):
     containers, stations, used = [], [], set()
     plan = Plan(BASE[0], BASE[1], PLAN_RADIUS)
+    world = World(world_dir, BASE, BASE_RADIUS, NAMES)
     for z in world_objects(world_dir):
         pf = HASHES.get(z["prefab"])
         plan.add(pf, z["pos"], z["yaw"])
+        world.add(pf, z)
         x, _, zz = z["pos"] or (0, 0, 0)
         if pf in KIND and ITEMS in z.get("bytes", {}):
             items = [[HASHES.get(h, hex(h)), s, q] for h, s, q in parse_items(z["bytes"][ITEMS])]
             if not items:
                 continue
             used.update(p for p, _, _ in items)
-            containers.append({"kind": KIND[pf], "x": round(x), "z": round(zz), "p": [round(x, 1), round(-zz, 1)],
-                               "base": (x - BASE[0]) ** 2 + (zz - BASE[1]) ** 2 < BASE_RADIUS ** 2,
-                               "items": items})
+            c = {"kind": KIND[pf], "x": round(x), "z": round(zz), "p": [round(x, 1), round(-zz, 1)],
+                 "base": (x - BASE[0]) ** 2 + (zz - BASE[1]) ** 2 < BASE_RADIUS ** 2, "items": items}
+            if pf == "Player_tombstone":
+                c["owner"] = z.get("strs", {}).get(OWNER, "")
+            containers.append(c)
         elif z["prefab"] in STATION_HASH:
             kind = STATION_HASH[z["prefab"]]
             ints, strs = z.get("ints", {}), z.get("strs", {})
@@ -77,9 +83,12 @@ def build(world_dir):
 
     ok = sorted(glob.glob(os.path.join(world_dir, "_main.*.ok")), key=os.path.getmtime)
     saved = datetime.fromtimestamp(os.path.getmtime(ok[-1]) if ok else 0, ART)
+    stored = historial.totals(containers)
+    world = world.summary(stored)
+    used.update(b["item"] for b in world["bosses"])
     return {"saved": saved.isoformat(timespec="minutes"),
             "built": datetime.now(ART).isoformat(timespec="minutes"),
-            "containers": containers, "stations": stations, "plan": plan.to_json(),
+            "containers": containers, "stations": stations, "plan": plan.to_json(), "world": world,
             "names": {p: NAMES.get(p, {"es": p, "cat": "Otros"}) for p in sorted(used)}}
 
 
@@ -113,6 +122,11 @@ def main(world_dir, out_path):
     if not glob.glob(os.path.join(world_dir, "*.chunk")):
         sys.exit(f"No hay archivos .chunk en {world_dir}: no publico una pagina vacia.")
     data = build(world_dir)
+    # Historial: se compara con lo publicado antes (el workflow lo baja a PREV_DIR).
+    data["history"] = historial.update(os.environ.get("PREV_DIR"), data["saved"], historial.totals(data["containers"]))
+    for h in data["history"]:
+        for p in (*h["entro"], *h["salio"]):
+            data["names"].setdefault(p, NAMES.get(p, {"es": p, "cat": "Otros"}))
     out_dir = os.path.dirname(os.path.abspath(out_path))
     data["icons"] = copy_icons(data["names"], os.path.join(out_dir, "icons"))
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()
@@ -123,8 +137,12 @@ def main(world_dir, out_path):
     with open(os.path.join(out_dir, "inventario.json"), "w", encoding="utf-8") as f:
         json.dump(to_json(data, BASE, BASE_RADIUS), f, ensure_ascii=False, indent=1)
     open(os.path.join(out_dir, "inventario.md"), "w", encoding="utf-8").write(to_markdown(data, BASE, BASE_RADIUS))
+    with open(os.path.join(out_dir, "historial.json"), "w", encoding="utf-8") as f:
+        json.dump(data["history"], f, ensure_ascii=False, indent=1)
     # Huella del contenido (sin horas): el workflow no republica si es igual a la publicada.
-    content = json.dumps({k: data[k] for k in ("containers", "stations", "plan", "names")}, sort_keys=True)
+    world = {k: v for k, v in data["world"].items() if k != "day"}   # el dia avanza solo: no cuenta como cambio
+    content = json.dumps({**{k: data[k] for k in ("containers", "stations", "plan", "names")}, "world": world},
+                         sort_keys=True)
     open(os.path.join(out_dir, "estado.txt"), "w").write(hashlib.sha256(content.encode()).hexdigest() + "\n")
     print(f"{len(data['containers'])} contenedores, {len(data['stations'])} estaciones, "
           f"{len(data['names'])} items distintos; guardado {data['saved']} -> {out_path}")
