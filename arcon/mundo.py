@@ -1,5 +1,6 @@
-"""Datos del mundo que no estan en los cofres: seed, dia, jefes derrotados, lugares,
-portales, colmenas, nidos y cultivos.
+"""Datos del mundo que no estan en los cofres: seed, dia, jefes derrotados, portales,
+colmenas, nidos y cultivos. Sin spoilers: no se publican lugares del mapa y de los jefes
+solo van los derrotados y el siguiente.
 
 - _main.N.fwl2: i32 tamano, i32 version, nombre, seed, ...; mas adelante la lista de
   jugadores que entraron (i32 cantidad y por cada uno: id de Steam, nombre, nombre, id).
@@ -19,22 +20,15 @@ from zdo import Reader, stable_hash
 
 DAY_SECONDS = 1800
 
-# clave global, nombre, item para invocarlo, cantidad, lugar del altar
+# clave global, nombre, item para invocarlo, cantidad (en orden de progresion)
 BOSSES = [
-    ("defeated_eikthyr", "Eikthyr", "TrophyDeer", 2, "Eikthyrnir"),
-    ("defeated_gdking", "El Anciano", "AncientSeed", 3, "GDKing"),
-    ("defeated_bonemass", "Bonemass", "WitheredBone", 10, "Bonemass"),
-    ("defeated_dragon", "Moder", "DragonEgg", 3, "Dragonqueen"),
-    ("defeated_goblinking", "Yagluth", "GoblinTotem", 5, "GoblinKing"),
-    ("defeated_queen", "La Reina", "DvergrKey", 1, "Mistlands_DvergrBossEntrance1"),
-    ("defeated_fader", "Fader", "BellFragment", 3, "FaderLocation"),
-]
-# lugar, como se muestra, cuantos de los mas cercanos a la base
-PLACES = [
-    ("Vendor_BlackForest", "Haldor (comerciante)", 1),
-    ("Hildir_camp", "Campamento de Hildir", 3),
-    ("BogWitch_Camp", "Campamento de la Bruja del pantano", 3),
-    ("AncientUpgradeStation", "Forja del Potencial", 3),
+    ("defeated_eikthyr", "Eikthyr", "TrophyDeer", 2),
+    ("defeated_gdking", "El Anciano", "AncientSeed", 3),
+    ("defeated_bonemass", "Bonemass", "WitheredBone", 10),
+    ("defeated_dragon", "Moder", "DragonEgg", 3),
+    ("defeated_goblinking", "Yagluth", "GoblinTotem", 5),
+    ("defeated_queen", "La Reina", "DvergrKey", 1),
+    ("defeated_fader", "Fader", "BellFragment", 3),
 ]
 CROPS = {  # lo que se cosecha (ya crecido) y lo que esta creciendo
     "Pickable_Carrot": "Zanahoria", "Pickable_SeedCarrot": "Semillas de zanahoria",
@@ -151,20 +145,14 @@ class World:
     def summary(self, stored):
         """stored: {prefab: cantidad} de todo lo guardado, para contar invocaciones."""
         keys = set(self.db["keys"])
-        by_loc = {}
-        for h, x, y, zz, placed in self.db["locations"]:
-            by_loc.setdefault(h, []).append((round(self._dist(x, zz)), round(x), round(zz), bool(placed)))
-        nearest = lambda name, k: sorted(by_loc.get(stable_hash(name), []))[:k]
-
         bosses = []
-        for key, name, item, need, loc in BOSSES:
+        for key, name, item, need in BOSSES:
             have = stored.get(item, 0)
             bosses.append({"name": name, "done": key in keys, "item": item,
                            "item_es": self.names.get(item, {}).get("es", item), "need": need,
-                           "have": have, "tries": have // need,
-                           "where": [{"d": d, "x": x, "z": z, "seen": s} for d, x, z, s in nearest(loc, 3)]})
-        places = [{"name": label, "where": [{"d": d, "x": x, "z": z, "seen": s} for d, x, z, s in nearest(loc, k)]}
-                  for loc, label, k in PLACES]
+                           "have": have, "tries": have // need})
+            if key not in keys:
+                break   # el siguiente se muestra; los que vienen despues no (spoiler)
 
         count = {}
         for p in self.portals:
@@ -176,7 +164,8 @@ class World:
         crops = [{"name": CROPS[k], "n": n} for k, n in self.crops.items() if not k.startswith("growing:")]
         growing = [{"name": self.names.get(k[8:], {}).get("es", k[8:].replace("sapling_", "")), "n": n}
                    for k, n in self.crops.items() if k.startswith("growing:")]
-        return {"seed": self.meta["seed"], "day": self.db["day"], "bosses": bosses, "places": places,
+        # La seed no se publica: con ella se puede ver el mapa entero (spoiler).
+        return {"day": self.db["day"], "bosses": bosses,
                 "portals": self.portals,
                 "hives": {"n": len(self.hives), "ready": sum(h["n"] for h in self.hives), "full": sum(h["n"] >= 4 for h in self.hives)},
                 "nests": {"n": len(self.nests), "ready": sum(h["n"] for h in self.nests), "full": sum(h["n"] >= 4 for h in self.nests)},

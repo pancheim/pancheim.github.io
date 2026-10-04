@@ -84,20 +84,13 @@ def to_markdown(data, base, radius):
     return "\n".join(out) + "\n"
 
 
-def _where_md(w):
-    return "; ".join(f"({p['x']}, {p['z']}) a {p['d']} m" + (" · zona visitada" if p["seen"] else "") for p in w) or "—"
-
-
 def _world_md(data, nm):
     w = data["world"]
-    out = ["", "## Mundo", "", f"- Seed: `{w['seed']}` · Día {w['day']}"]
+    out = ["", "## Mundo", "", f"- Día {w['day']}"]
     out += ["", "## Jefes", "", "| Jefe | Estado | Para invocarlo | Hay | Intentos |", "|---|---|---|--:|--:|"]
     for b in w["bosses"]:
-        out.append(f"| {b['name']} | {'derrotado' if b['done'] else 'pendiente'} | {b['need']} × {b['item_es']} "
+        out.append(f"| {b['name']} | {'derrotado' if b['done'] else 'próximo'} | {b['need']} × {b['item_es']} "
                    f"| {b['have']} | {b['tries']} |")
-    nxt = next((b for b in w["bosses"] if not b["done"]), None)
-    if nxt:
-        out += ["", f"Próximo: **{nxt['name']}**. Altares más cercanos a la base: {_where_md(nxt['where'])}."]
 
     hv, ns = w["hives"], w["nests"]
     out += ["", "## Colmenas, nidos y cultivos", "",
@@ -122,9 +115,4 @@ def _world_md(data, nm):
     if not hist:
         out.append("Todavía no hay cambios registrados.")
 
-    out += ["", "## Lugares (spoiler: incluye zonas sin explorar)", ""]
-    for b in w["bosses"]:
-        out.append(f"- Altar de {b['name']}: {_where_md(b['where'])}")
-    for pl in w["places"]:
-        out.append(f"- {pl['name']}: {_where_md(pl['where'])}")
     return out

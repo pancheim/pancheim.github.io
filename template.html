@@ -123,11 +123,7 @@ header.panel { padding: 18px 20px 16px; display: grid; gap: 6px; }
 .list .k { color: var(--amber); font-weight: 700; overflow-wrap: anywhere; }
 .list .s { color: var(--muted); }
 .plus { color: var(--green); } .minus { color: #ff9d6b; }
-.spoiler > summary { cursor: pointer; padding: 10px 14px; color: var(--muted); font: .92rem var(--ui); list-style: none; }
-.spoiler > summary::-webkit-details-marker { display: none; }
-.spoiler > summary::before { content: "▸ "; color: var(--select); }
-.spoiler[open] > summary::before { content: "▾ "; }
-.spoiler > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+
 .note a { color: var(--yellow); }
 
 /* Plano de la base dentro de cada item: lo construido visto desde arriba, norte arriba. */
@@ -212,10 +208,9 @@ header.panel { padding: 18px 20px 16px; display: grid; gap: 6px; }
     <p class="note">Coordenadas del mapa (x, z). “Base” es todo lo que está a menos de 150 m de la base principal. No incluye lo que cada uno lleva encima, ni los trofeos colgados en soportes.</p>
   </section>
 
-  <section aria-labelledby="h-pl" style="display:grid;gap:10px">
-    <h2 id="h-pl">Lugares del mundo</h2>
-    <details class="spoiler panel"><summary>Mostrar (spoiler: incluye zonas que nadie exploró)</summary><div class="list" id="places"></div></details>
-    <p class="note">“Zona visitada” quiere decir que el juego ya generó esa zona porque alguien pasó cerca. Distancias en línea recta desde la base.</p>
+  </section>
+
+  <section style="display:grid;gap:10px">
     <p class="note">También en texto: <a href="inventario.md">inventario.md</a> (resumen) y <a href="inventario.json">inventario.json</a> (datos exactos).</p>
   </section>
 </div>
@@ -243,7 +238,7 @@ document.getElementById("meta").innerHTML =
   `<span>Último cambio publicado: ${when(new Date(D.built))}</span>` +
   `<span><b>${D.containers.filter(c => c.kind !== "Tumba").length}</b> cofres y vehículos</span>` +
   `<span><b>${D.containers.filter(c => c.kind === "Tumba").length}</b> tumbas</span>` +
-  (W.day ? `<span>Día <b>${W.day}</b></span>` : "") + (W.seed ? `<span>Seed <b>${esc(W.seed)}</b></span>` : "");
+  (W.day ? `<span>Día <b>${W.day}</b></span>` : "");
 
 let state = { q: "", cat: "Todo", scope: new Set(["base", "afuera"]), sort: "total", dir: -1 };
 try { const s = JSON.parse(localStorage.getItem("arcon-state") || "null"); if (s) { state.cat = s.cat || "Todo"; state.scope = new Set(s.scope || ["base", "afuera"]); } } catch (e) {}
@@ -326,7 +321,6 @@ document.getElementById("chests").innerHTML = [...D.containers]
 
 
 // ---------- Mundo: jefes, base, portales, historial, lugares ----------
-const loc = w => w.map(p => `${p.x}, ${p.z} · ${fmt(p.d)} m${p.seen ? " · zona visitada" : ""}`).join("<br>");
 const next = (W.bosses || []).find(b => !b.done);
 document.getElementById("bosses").innerHTML = (W.bosses || []).map(b =>
   `<div class="st panel${b.done ? " done" : ""}"><span class="k">${b.name}${b.done ? `<span class="tick">✓ derrotado</span>` : ""}</span>` +
@@ -356,10 +350,6 @@ document.getElementById("history").innerHTML = hist.slice(0, 15).map(h =>
   Object.entries(h.entro).map(([p, n]) => `<span class="plus">+${fmt(n)} ${N(p)}</span>`).concat(
   Object.entries(h.salio).map(([p, n]) => `<span class="minus">−${fmt(n)} ${N(p)}</span>`)).join(", ") + `</span></div>`).join("")
   || `<div class="empty">Todavía no hay cambios registrados: se empiezan a anotar desde ahora.</div>`;
-
-document.getElementById("places").innerHTML =
-  (W.bosses || []).map(b => `<div><span class="k">Altar de ${b.name}</span><span class="s">${loc(b.where)}</span></div>`).join("") +
-  (W.places || []).map(p => `<div><span class="k">${p.name}</span><span class="s">${loc(p.where)}</span></div>`).join("");
 
 // ---------- Plano de la base (se dibuja al abrir un item) ----------
 const P = D.plan;

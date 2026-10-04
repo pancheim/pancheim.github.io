@@ -45,8 +45,9 @@ Además de la página, cada corrida publica:
 
 Además de los cofres, la página lee del mundo:
 
-- **Jefes**: cuáles cayeron (las marcas globales del mundo) y cuántas
-  invocaciones alcanzan con lo guardado.
+- **Jefes**: cuáles cayeron (las marcas globales del mundo), el siguiente y
+  cuántas invocaciones alcanzan con lo guardado. Sin spoilers: los jefes que
+  vienen después del siguiente no se muestran.
 - **Para sacar en la base**: miel de las colmenas, plumas de los nidos y
   cultivos listos.
 - **Portales**: nombre, quién lo puso y si tiene pareja. Un espacio de más al
@@ -54,12 +55,10 @@ Además de los cofres, la página lee del mundo:
 - **Últimos cambios**: no hay base de datos; la página publicada es la memoria.
   Antes de armar, el workflow baja el `inventario.json` y el `historial.json`
   publicados y `arcon/historial.py` agrega la diferencia.
-- **Lugares** (oculto, porque es spoiler): altares, comerciantes y Forjas del
-  Potencial más cercanos a la base, y si esa zona ya se generó.
-- Seed y día del mundo, y de quién es cada tumba.
+- Día del mundo y de quién es cada tumba.
 
-Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (seed y jugadores),
-`_main.N.db2` (marcas globales y lugares) y los objetos de los chunks.
+Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (nombres de los jugadores),
+`_main.N.db2` (marcas globales) y los objetos de los chunks.
 
 ## Cosas a saber
 
@@ -87,3 +86,9 @@ Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (seed y jugadores),
   página y quedan en caché entre corridas.
 - `data/names.json` tiene el nombre en español y la categoría de cada item,
   tal como los muestra el juego.
+
+## Sin spoilers
+
+El guardado del mundo tiene la ubicación de todos los altares, comerciantes y
+lugares especiales, incluso de zonas que nadie exploró, y la seed permite ver
+el mapa entero. A propósito, la página no publica nada de eso.
