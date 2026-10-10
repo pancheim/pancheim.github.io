@@ -14,7 +14,10 @@ Uso: python arcon/fetch_ftp.py <carpeta_destino>
 """
 import ftplib
 import os
+import re
+import shutil
 import sys
+import time
 from datetime import datetime, timezone
 
 MONTHS = {m: i for i, m in enumerate(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
@@ -64,28 +67,30 @@ def list_files(ftp):
     return out, "LIST"
 
 
-def main(dest):
-    missing = [k for k in ("FTP_HOST", "FTP_USER", "FTP_PASS") if not os.environ.get(k)]
-    if missing:
-        sys.exit(f"Faltan los secretos {', '.join(missing)}: cargalos en Settings > Secrets and variables > Actions.")
-    host, user, pw = os.environ["FTP_HOST"], os.environ["FTP_USER"], os.environ["FTP_PASS"]
-    port = int(os.environ.get("FTP_PORT") or 21)
-    remote = os.environ.get("FTP_WORLD_DIR") or "save/worlds_local/gportal_unzip_ppqaovp_"
-    ftp = ftplib.FTP_TLS() if os.environ.get("FTP_TLS") == "1" else ftplib.FTP()
-    ftp.connect(host, port, timeout=60)
-    ftp.login(user, pw)
-    if isinstance(ftp, ftplib.FTP_TLS):
-        ftp.prot_p()
-    ftp.cwd(remote)
-    os.makedirs(dest, exist_ok=True)
-    files, source = list_files(ftp)
-    # Bajamos solo los archivos del guardado actual: los _main del numero mas alto
-    # y todos los .chunk (cada coordenada tiene un solo archivo vigente).
+ATTEMPTS, WAIT = 3, 30
+CHUNK = re.compile(r"^(.*)_(\d+)\.chunk$")
+
+
+def current_files(files):
+    """Los _main del guardado mas alto y, de cada chunk, solo su version mas nueva
+    (mientras el servidor guarda pueden convivir la vieja y la nueva)."""
     mains = [n for n in files if n.startswith("_main.")]
     if not mains:
-        sys.exit(f"No hay archivos _main en {remote}: revisa FTP_WORLD_DIR.")
+        return None, []
     latest = max(int(n.split(".")[1]) for n in mains)
-    wanted = [n for n in files if n.endswith(".chunk") or n.startswith(f"_main.{latest}.")]
+    newest = {}
+    for n in files:
+        m = CHUNK.match(n)
+        if m and (m.group(1) not in newest or int(m.group(2)) > newest[m.group(1)][0]):
+            newest[m.group(1)] = (int(m.group(2)), n)
+    return latest, [n for n in files if n.startswith(f"_main.{latest}.")] + [n for _, n in newest.values()]
+
+
+def download(ftp, dest, remote):
+    files, source = list_files(ftp)
+    latest, wanted = current_files(files)
+    if latest is None:
+        sys.exit(f"No hay archivos _main en {remote}: revisa FTP_WORLD_DIR.")
     dated = 0
     for n in wanted:
         path = os.path.join(dest, n)
@@ -101,6 +106,37 @@ def main(dest):
         if t is not None:
             os.utime(path, (t, t))
             dated += 1
+    return latest, wanted, dated, source
+
+
+def main(dest):
+    missing = [k for k in ("FTP_HOST", "FTP_USER", "FTP_PASS") if not os.environ.get(k)]
+    if missing:
+        sys.exit(f"Faltan los secretos {', '.join(missing)}: cargalos en Settings > Secrets and variables > Actions.")
+    host, user, pw = os.environ["FTP_HOST"], os.environ["FTP_USER"], os.environ["FTP_PASS"]
+    port = int(os.environ.get("FTP_PORT") or 21)
+    remote = os.environ.get("FTP_WORLD_DIR") or "save/worlds_local/gportal_unzip_ppqaovp_"
+    ftp = ftplib.FTP_TLS() if os.environ.get("FTP_TLS") == "1" else ftplib.FTP()
+    ftp.connect(host, port, timeout=60)
+    ftp.login(user, pw)
+    if isinstance(ftp, ftplib.FTP_TLS):
+        ftp.prot_p()
+    ftp.cwd(remote)
+    # Si el servidor guarda mientras bajamos, un archivo listado puede desaparecer
+    # (se reemplaza por la version nueva del chunk) y el RETR da 550. En ese caso
+    # se empieza de nuevo con un listado fresco.
+    for attempt in range(1, ATTEMPTS + 1):
+        shutil.rmtree(dest, ignore_errors=True)
+        os.makedirs(dest)
+        try:
+            latest, wanted, dated, source = download(ftp, dest, remote)
+            break
+        except ftplib.error_perm as e:
+            if not str(e).startswith("550") or attempt == ATTEMPTS:
+                raise
+            print(f"::warning::Un archivo cambió durante la descarga ({e}); el servidor estaba guardando. "
+                  f"Reintento {attempt + 1}/{ATTEMPTS} en {WAIT * attempt} s.")
+            time.sleep(WAIT * attempt)
     ftp.quit()
     print(f"Bajados {len(wanted)} archivos del guardado {latest} desde {remote}; "
           f"fechas del servidor: {dated}/{len(wanted)} (listado con {source})")
