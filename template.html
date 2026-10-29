@@ -471,7 +471,7 @@ const RC = D.recetas && D.recetas.recetas.length ? D.recetas : null;
 const have = p => (STOCK.get(p) || { total: 0 }).total;
 // Lo que pide cada nivel: el 1 es la receta, del 2 en adelante la mejora (el juego multiplica por el nivel - 1).
 const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
-const missing = (r, q) => needs(r, q).filter(([p, n]) => have(p) < n).length;
+const missing = (r, q) => { const m = needs(r, q).filter(([p, n]) => have(p) < n).length; return r.one ? +(m === needs(r, q).length) : m; };
 const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
 let rsel = { i: null, q: 1, text: "", f: "todo" };
 const RF = { todo: "Todo", puede: "Se puede", falta: "Falta algo" };

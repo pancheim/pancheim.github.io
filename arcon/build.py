@@ -96,13 +96,22 @@ def build(world_dir):
             "names": {p: NAMES.get(p, {"es": p, "cat": "Otros"}) for p in sorted(used)}}
 
 
+# Lo que vende Haldor: lo conocen desde que encontraron al mercader (portal MERCADER).
+HALDOR = {"YmirRemains"}
+
+
 def recetas(seen):
-    """Lo que me falta para fabricar algo, sin spoilers: solo las recetas cuyos ingredientes
-    pasaron alguna vez por los cofres (registro completo o ahora). Lo que nunca tuvieron no aparece."""
+    """Lo que me falta para fabricar algo, sin spoilers: solo las recetas de cosas que el clan ya
+    tuvo, o cuyos ingredientes pasaron alguna vez por los cofres (registro completo o ahora).
+    Lo que nunca tuvieron no aparece."""
     if not os.path.exists(RECETAS):
         return None
     d = json.load(open(RECETAS, encoding="utf-8"))
-    ok = [r for r in d["recetas"] if r["res"] and all(p in seen for p, _, _ in r["res"])]
+    seen = seen | HALDOR
+    ok = [r for r in d["recetas"] if r["res"] and (r["out"] in seen or all(p in seen for p, _, _ in r["res"]))]
+    for r in ok:   # las de "uno de estos" (pescado crudo) no nombran lo que nunca tuvieron
+        if r["one"]:
+            r["res"] = [x for x in r["res"] if x[0] in seen] or r["res"]
     return {"estaciones": {s: d["estaciones"][s] for s in {r["st"] for r in ok if r["st"]}},
             "nombres": d["nombres"], "recetas": ok}
 
