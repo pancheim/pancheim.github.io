@@ -23,6 +23,9 @@ from zdo import parse_items, stable_hash, world_objects
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HASHES = {int(k): v for k, v in json.load(open(os.path.join(ROOT, "data", "hashes.json"))).items()}
 NAMES = json.load(open(os.path.join(ROOT, "data", "names.json"), encoding="utf-8"))
+# Nombre en ingles de cada item (del juego, lo genera valheim-contexto: tools/recetas.py --exportar).
+_EN = os.path.join(ROOT, "data", "names_en.json")
+NAMES_EN = json.load(open(_EN, encoding="utf-8")) if os.path.exists(_EN) else {}
 # Recetas de items, leidas del juego en la PC (valheim-contexto: tools/recetas.py --exportar).
 RECETAS = os.path.join(ROOT, "data", "recetas.json")
 
@@ -160,6 +163,8 @@ def main(world_dir, out_path):
         for r in data["recetas"]["recetas"]:
             for p in (r["out"], *(x[0] for x in r["res"])):
                 data["names"].setdefault(p, NAMES.get(p, {"es": extra.get(p, p), "cat": "Otros"}))
+    data["names"] = {p: {**n, "en": NAMES_EN[p]} if NAMES_EN.get(p, n["es"]) != n["es"] else n
+                     for p, n in data["names"].items()}
     out_dir = os.path.dirname(os.path.abspath(out_path))
     data["icons"] = copy_icons(data["names"], os.path.join(out_dir, "icons"))
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()

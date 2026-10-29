@@ -62,6 +62,8 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .ico.lg { width: 44px; height: 44px; padding: 4px; }
 .ico.none { display: inline-block; }
 .muted { color: var(--muted); }
+/* Nombre en inglés al lado del español: chico y apagado para que no llene la pantalla. */
+.en { font: 400 .78em var(--ui); color: var(--muted); opacity: .8; letter-spacing: 0; text-transform: none; }
 .coord { font: .8rem var(--ui); color: #a8927a; }
 .empty { padding: 18px 14px; color: var(--muted); font-family: var(--ui); }
 .plus { color: var(--green); } .minus { color: var(--red); }
@@ -155,6 +157,16 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .need .q b { font-weight: 700; }
 .ok { color: var(--green); } .miss { color: var(--red); }
 
+/* Pantalla ancha: "Dónde buscar" y "Qué me falta" lado a lado; el historial sigue abajo. */
+.duo { display: grid; gap: 34px; }
+@media (min-width: 1400px) {
+  .wrap { max-width: 1760px; }
+  .duo { grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); gap: 24px; align-items: start; }
+  #falta .forge { grid-template-columns: minmax(0, 1fr); }
+  #falta .items { max-height: 34vh; }
+  .part > .lead { min-height: 3em; }
+}
+
 @media (max-width: 820px) {
   .forge { grid-template-columns: minmax(0, 1fr); }
   .finder { grid-template-columns: minmax(0, 1fr); }
@@ -178,12 +190,13 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
     <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Dónde buscar</a><a class="chip" href="#falta">Qué me falta</a><a class="chip" href="#historial">Historial</a></nav>
   </header>
 
+  <div class="duo">
   <section class="part" id="buscar" aria-labelledby="h-buscar">
     <h2 id="h-buscar">Dónde buscar</h2>
     <p class="lead">Elegí qué necesitás y el plano marca los cofres de la base que lo tienen. Tocá un cofre del plano para ver todo lo que guarda.</p>
     <div class="finder">
       <div class="picker panel">
-        <input class="search" id="q" type="search" placeholder="Buscar: plata, madera, hidromiel…" aria-label="Buscar recurso">
+        <input class="search" id="q" type="search" placeholder="Buscar: plata, silver, hidromiel…" aria-label="Buscar recurso">
         <div class="row" id="cats"></div>
         <div class="items" id="items" role="list"></div>
       </div>
@@ -201,13 +214,14 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
     <p class="lead">Elegí qué querés fabricar y te dice cuánto hay en los cofres de cada cosa que pide. Solo aparecen recetas con materiales que ya pasaron por el arcón: lo que todavía no encontraron, no se muestra.</p>
     <div class="forge">
       <div class="picker panel">
-        <input class="search" id="rq" type="search" placeholder="Fabricar: maza, coraza, hidromiel…" aria-label="Buscar receta">
+        <input class="search" id="rq" type="search" placeholder="Fabricar: maza, mace, coraza…" aria-label="Buscar receta">
         <div class="row" id="rfilter"></div>
         <div class="items" id="rlist" role="list"></div>
       </div>
       <div class="recipe panel" id="recipe"></div>
     </div>
   </section>
+  </div>
 
   <section class="part" id="historial" aria-labelledby="h-hist">
     <h2 id="h-hist">Historial</h2>
@@ -232,6 +246,8 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 const D = JSON.parse(document.getElementById("data").textContent);
 const $ = id => document.getElementById(id);
 const N = p => (D.names[p] && D.names[p].es) || p;
+const E = p => (D.names[p] && D.names[p].en) || "";
+const NN = p => esc(N(p)) + (E(p) ? ` <i class="en">${esc(E(p))}</i>` : "");
 const C = p => (D.names[p] && D.names[p].cat) || "Otros";
 const ICONS = new Set(D.icons || []);
 const icon = (p, cls = "") => ICONS.has(p)
@@ -241,6 +257,7 @@ const fmt = n => n.toLocaleString("es-AR");
 const sign = n => (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const hit = (p, q) => !q || norm(N(p)).includes(q) || norm(E(p)).includes(q) || norm(p).includes(q);
 const TZ = { timeZone: "America/Argentina/Buenos_Aires" };
 const when = d => `${d.toLocaleDateString("es-AR", { ...TZ, day: "numeric", month: "short" })} ${d.toLocaleTimeString("es-AR", { ...TZ, hour: "2-digit", minute: "2-digit" })}`;
 const day = d => d.toLocaleDateString("es-AR", { ...TZ, day: "numeric", month: "short" });
@@ -280,12 +297,12 @@ function renderCats() {
 $("cats").onclick = e => { const b = e.target.closest("[data-cat]"); if (!b) return; state.cat = b.dataset.cat; remember(); renderCats(); renderItems(); };
 function renderItems() {
   const q = norm(state.q.trim());
-  const rows = [...STOCK.values()].filter(e => (state.cat === "Todo" || C(e.p) === state.cat) && (!q || norm(N(e.p)).includes(q) || norm(e.p).includes(q)))
+  const rows = [...STOCK.values()].filter(e => (state.cat === "Todo" || C(e.p) === state.cat) && hit(e.p, q))
     .sort((a, b) => b.total - a.total || N(a.p).localeCompare(N(b.p), "es"));
   $("items").innerHTML = rows.map(e => {
     const inBase = [...e.at.keys()].filter(ci => inPlan(BOXES[ci])).length, out = e.at.size - inBase;
     const where = [inBase ? `${inBase} ${inBase === 1 ? "cofre" : "cofres"} en la base` : "", out ? `${out} afuera` : ""].filter(Boolean).join(" · ");
-    return `<button class="it" role="listitem" data-p="${esc(e.p)}" aria-pressed="${state.sel === e.p}">${icon(e.p)}<span class="n">${esc(N(e.p))}<small>${where}</small></span><span class="num">${fmt(e.total)}</span></button>`;
+    return `<button class="it" role="listitem" data-p="${esc(e.p)}" aria-pressed="${state.sel === e.p}">${icon(e.p)}<span class="n">${NN(e.p)}<small>${where}</small></span><span class="num">${fmt(e.total)}</span></button>`;
   }).join("") || `<div class="empty">Nada guardado con ese nombre.</div>`;
 }
 $("items").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, true); };
@@ -336,7 +353,7 @@ $("plan").addEventListener("click", ev => {
 function renderBoardHead() {
   const e = state.sel && STOCK.get(state.sel);
   $("board-head").innerHTML = e
-    ? `${icon(e.p, "lg")}<span class="t"><b>${esc(N(e.p))}</b><span>${fmt(e.total)} guardados en ${e.at.size} ${e.at.size === 1 ? "lugar" : "lugares"}</span></span><a class="chip" href="#historial">Ver historial</a>`
+    ? `${icon(e.p, "lg")}<span class="t"><b>${NN(e.p)}</b><span>${fmt(e.total)} guardados en ${e.at.size} ${e.at.size === 1 ? "lugar" : "lugares"}</span></span><a class="chip" href="#historial">Ver historial</a>`
     : `<span class="t"><b>Elegí un recurso</b><span>Buscalo en la lista o tocá un cofre del plano.</span></span>`;
 }
 function renderPlaces() {
@@ -347,7 +364,7 @@ function renderPlaces() {
     for (const [p, s] of c.items) agg.set(p, (agg.get(p) || 0) + s);
     html += `<h3>${esc(c.kind)} · <span class="coord">${c.x}, ${c.z}</span></h3><div class="contents">` +
       [...agg.entries()].sort((a, b) => b[1] - a[1]).map(([p, n]) =>
-        `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${esc(N(p))}</span><span class="num">${fmt(n)}</span></button>`).join("") + `</div>`;
+        `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${NN(p)}</span><span class="num">${fmt(n)}</span></button>`).join("") + `</div>`;
   }
   if (e) {
     const at = [...e.at.entries()].sort((a, b) => b[1] - a[1]);
@@ -448,7 +465,7 @@ function renderHistory() {
   const p = state.sel;
   if (!p) { $("hist-title").innerHTML = `<b>Elegí un recurso arriba o abajo</b>`; $("stats").innerHTML = ""; $("chart").innerHTML = ""; return; }
   const v = values(p), i0 = rangeStart(), now = v.length ? v[v.length - 1] : 0, seg = v.slice(i0);
-  $("hist-title").innerHTML = `${icon(p, "lg")}<b>${esc(N(p))}</b>`;
+  $("hist-title").innerHTML = `${icon(p, "lg")}<b>${NN(p)}</b>`;
   $("stats").innerHTML = `<span><b>${fmt(now)}</b>ahora</span><span><b class="${now - v[i0] > 0 ? "plus" : now - v[i0] < 0 ? "minus" : ""}">${sign(now - v[i0])}</b>en ${RANGES[state.range][0].toLowerCase()}</span>` +
     `<span><b>${fmt(Math.max(0, ...seg))}</b>máximo</span><span><b>${fmt(Math.min(...seg))}</b>mínimo</span>`;
   renderChart(p);
@@ -461,7 +478,7 @@ function renderMovers() {
     .filter(r => r.d && ["Materiales", "Comida y pociones", "Flechas", "Trofeos"].includes(C(r.p)))
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 12);
   $("movers-h").textContent = `Lo que más se movió en ${RANGES[state.range][0].toLowerCase()}`;
-  $("movers").innerHTML = rows.map(r => `<button class="mv panel" data-p="${esc(r.p)}" aria-pressed="${state.sel === r.p}">${icon(r.p)}<span class="n">${esc(N(r.p))}<small>${fmt(r.now)} ahora</small></span><span class="d ${r.d > 0 ? "plus" : "minus"}">${sign(r.d)}</span></button>`).join("")
+  $("movers").innerHTML = rows.map(r => `<button class="mv panel" data-p="${esc(r.p)}" aria-pressed="${state.sel === r.p}">${icon(r.p)}<span class="n">${NN(r.p)}<small>${fmt(r.now)} ahora</small></span><span class="d ${r.d > 0 ? "plus" : "minus"}">${sign(r.d)}</span></button>`).join("")
     || `<div class="empty">Nada cambió en este período.</div>`;
 }
 $("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, false); };
@@ -485,10 +502,10 @@ function renderRecipes() {
   const all = RC.recetas.map((r, i) => ({ r, i, m: missing(r, 1) }));
   const n = { todo: all.length, puede: all.filter(x => !x.m).length, falta: all.filter(x => x.m).length };
   $("rfilter").innerHTML = Object.entries(RF).map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${rsel.f === k}">${l} · ${n[k]}</button>`).join("");
-  const rows = all.filter(({ r, m }) => (rsel.f === "todo" || (rsel.f === "puede") === !m) && (!q || norm(N(r.out)).includes(q) || norm(r.out).includes(q)))
+  const rows = all.filter(({ r, m }) => (rsel.f === "todo" || (rsel.f === "puede") === !m) && hit(r.out, q))
     .sort((a, b) => N(a.r.out).localeCompare(N(b.r.out), "es"));
   $("rlist").innerHTML = rows.map(({ r, i, m }) =>
-    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${esc(N(r.out))}<small>${esc(station(r, 1))}${have(r.out) ? ` · <span class="ok">${already(r.out)}</span>` : ""}</small></span>` +
+    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${NN(r.out)}<small>${esc(station(r, 1))}${have(r.out) ? ` · <span class="ok">${already(r.out)}</span>` : ""}</small></span>` +
     `<span class="num ${m ? "miss" : "ok"}">${m ? `faltan ${m}` : "se puede"}</span></button>`).join("") || `<div class="empty">No hay recetas con ese nombre (o piden algo que todavía no pasó por el arcón).</div>`;
 }
 function renderRecipe() {
@@ -497,10 +514,10 @@ function renderRecipe() {
   const q = Math.min(rsel.q, r.maxq);
   const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
     `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejora a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
-  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${esc(N(r.out))}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span>${have(r.out) ? `<button class="chip" data-have="${esc(r.out)}">Ver dónde</button>` : ""}</div>` +
+  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${NN(r.out)}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span>${have(r.out) ? `<button class="chip" data-have="${esc(r.out)}">Ver dónde</button>` : ""}</div>` +
     (have(r.out) ? `<p class="note"><b class="ok">${already(r.out)[0].toUpperCase() + already(r.out).slice(1)} en los cofres.</b> Fijate antes de fabricar uno nuevo.</p>` : "") + `${lv}` +
     `<div class="need">` + needs(r, q).map(([p, n]) => { const h = have(p);
-      return `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${esc(N(p))}<small>${h ? "ver en qué cofres" : "no hay en los cofres"}</small></span>` +
+      return `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${NN(p)}<small>${h ? "ver en qué cofres" : "no hay en los cofres"}</small></span>` +
         `<span class="q"><b class="${h >= n ? "ok" : "miss"}">${fmt(h)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
     (r.one ? `<p class="note">Pide uno solo de estos, no todos.</p>` : "") +
     `<p class="note">Cuenta lo guardado en cofres, carros y barcos, no lo que cada uno lleva encima.</p>`;
