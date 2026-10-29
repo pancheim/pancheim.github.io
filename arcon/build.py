@@ -23,6 +23,8 @@ from zdo import parse_items, stable_hash, world_objects
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HASHES = {int(k): v for k, v in json.load(open(os.path.join(ROOT, "data", "hashes.json"))).items()}
 NAMES = json.load(open(os.path.join(ROOT, "data", "names.json"), encoding="utf-8"))
+# Recetas de items, leidas del juego en la PC (valheim-contexto: tools/recetas.py --exportar).
+RECETAS = os.path.join(ROOT, "data", "recetas.json")
 
 KIND = {"piece_chest_wood": "Cofre", "piece_chest": "Cofre reforzado", "piece_chest_private": "Cofre personal",
         "piece_chest_blackmetal": "Cofre de metal negro", "Cart": "Carro", "Karve": "Karve",
@@ -94,6 +96,17 @@ def build(world_dir):
             "names": {p: NAMES.get(p, {"es": p, "cat": "Otros"}) for p in sorted(used)}}
 
 
+def recetas(seen):
+    """Lo que me falta para fabricar algo, sin spoilers: solo las recetas cuyos ingredientes
+    pasaron alguna vez por los cofres (registro completo o ahora). Lo que nunca tuvieron no aparece."""
+    if not os.path.exists(RECETAS):
+        return None
+    d = json.load(open(RECETAS, encoding="utf-8"))
+    ok = [r for r in d["recetas"] if r["res"] and all(p in seen for p, _, _ in r["res"])]
+    return {"estaciones": {s: d["estaciones"][s] for s in {r["st"] for r in ok if r["st"]}},
+            "nombres": d["nombres"], "recetas": ok}
+
+
 ICON_URL = "https://valheim-modding.github.io/Jotunn/Documentation/images/items/{}.png"
 ICON_CACHE = os.environ.get("ICON_CACHE", os.path.join(ROOT, ".icons"))
 
@@ -130,8 +143,14 @@ def main(world_dir, out_path):
     rows = registro.update(os.environ.get("REGISTRO"), data["saved"], data["world"].get("day"),
                            registro.totals(data["containers"]))
     data["registro"] = registro.series(rows)
+    data["recetas"] = recetas(set(data["registro"]["items"]) | set(historial.totals(data["containers"])))
     for p in (*(p for h in data["history"] for p in (*h["entro"], *h["salio"])), *data["registro"]["items"]):
         data["names"].setdefault(p, NAMES.get(p, {"es": p, "cat": "Otros"}))
+    if data["recetas"]:
+        extra = data["recetas"].pop("nombres")
+        for r in data["recetas"]["recetas"]:
+            for p in (r["out"], *(x[0] for x in r["res"])):
+                data["names"].setdefault(p, NAMES.get(p, {"es": extra.get(p, p), "cat": "Otros"}))
     out_dir = os.path.dirname(os.path.abspath(out_path))
     data["icons"] = copy_icons(data["names"], os.path.join(out_dir, "icons"))
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()

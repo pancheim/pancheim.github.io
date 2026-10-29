@@ -137,7 +137,26 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .mv .n small { display: block; color: var(--muted); font-size: .78rem; }
 .mv .d { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
+/* ---------- Parte 2: qué me falta ---------- */
+.forge { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.recipe { padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+.recipe .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.recipe .head .t { display: grid; flex: 1 1 200px; min-width: 0; }
+.recipe .head .t b { font: 700 1.15rem var(--ui); color: var(--gold); }
+.recipe .head .t span { color: var(--muted); font: .88rem var(--ui); }
+.need { display: grid; font-family: var(--ui); }
+.need button { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 5px 0; border-top: 1px solid rgba(255, 214, 160, .07); }
+.need button:hover .n { color: var(--gold); }
+.need button:focus-visible { outline: 2px solid var(--gold); }
+.need .n { overflow-wrap: anywhere; line-height: 1.25; }
+.need .n small { display: block; color: var(--muted); font-size: .78rem; }
+.need .q { text-align: right; font-variant-numeric: tabular-nums; }
+.need .q b { font-weight: 700; }
+.ok { color: var(--green); } .miss { color: var(--red); }
+
 @media (max-width: 820px) {
+  .forge { grid-template-columns: minmax(0, 1fr); }
   .finder { grid-template-columns: minmax(0, 1fr); }
   .board { position: static; }
   /* Los filtros en un solo renglón que se desliza de costado, así la lista queda a la vista. */
@@ -156,7 +175,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
   <header class="panel">
     <h1>Arcón de Pancheim</h1>
     <div class="meta" id="meta"></div>
-    <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Dónde buscar</a><a class="chip" href="#historial">Historial</a></nav>
+    <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Dónde buscar</a><a class="chip" href="#falta">Qué me falta</a><a class="chip" href="#historial">Historial</a></nav>
   </header>
 
   <section class="part" id="buscar" aria-labelledby="h-buscar">
@@ -174,6 +193,18 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
         <div class="legend"><span><i class="g"></i>Tiene lo que elegiste (el número es cuánto)</span><span><i class="c"></i>Otros cofres</span><span>Norte arriba</span></div>
         <div class="places panel" id="places"></div>
       </div>
+    </div>
+  </section>
+
+  <section class="part" id="falta" aria-labelledby="h-falta" hidden>
+    <h2 id="h-falta">Qué me falta</h2>
+    <p class="lead">Elegí qué querés fabricar y te dice cuánto hay en los cofres de cada cosa que pide. Solo aparecen recetas con materiales que ya pasaron por el arcón: lo que todavía no encontraron, no se muestra.</p>
+    <div class="forge">
+      <div class="picker panel">
+        <input class="search" id="rq" type="search" placeholder="Fabricar: maza, coraza, hidromiel…" aria-label="Buscar receta">
+        <div class="items" id="rlist" role="list"></div>
+      </div>
+      <div class="recipe panel" id="recipe"></div>
     </div>
   </section>
 
@@ -433,6 +464,52 @@ function renderMovers() {
     || `<div class="empty">Nada cambió en este período.</div>`;
 }
 $("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, false); };
+
+// ---------- Parte 2: qué me falta ----------
+const RC = D.recetas && D.recetas.recetas.length ? D.recetas : null;
+const have = p => (STOCK.get(p) || { total: 0 }).total;
+// Lo que pide cada nivel: el 1 es la receta, del 2 en adelante la mejora (el juego multiplica por el nivel - 1).
+const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
+const missing = (r, q) => needs(r, q).filter(([p, n]) => have(p) < n).length;
+const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
+let rsel = { i: null, q: 1, text: "" };
+try { const s = JSON.parse(localStorage.getItem("arcon-falta") || "null"); if (s) rsel.i = RC && RC.recetas.findIndex(r => r.out === s.out); if (rsel.i < 0) rsel.i = null; } catch (e) {}
+function renderRecipes() {
+  const q = norm(rsel.text.trim());
+  const rows = RC.recetas.map((r, i) => ({ r, i, m: missing(r, 1) }))
+    .filter(({ r }) => !q || norm(N(r.out)).includes(q) || norm(r.out).includes(q))
+    .sort((a, b) => a.m - b.m || N(a.r.out).localeCompare(N(b.r.out), "es")).slice(0, q ? 80 : 40);
+  $("rlist").innerHTML = rows.map(({ r, i, m }) =>
+    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${esc(N(r.out))}<small>${esc(station(r, 1))}</small></span>` +
+    `<span class="num ${m ? "miss" : "ok"}">${m ? `faltan ${m}` : "se puede"}</span></button>`).join("") || `<div class="empty">No hay recetas con ese nombre (o piden algo que todavía no pasó por el arcón).</div>`;
+}
+function renderRecipe() {
+  const r = RC.recetas[rsel.i];
+  if (!r) { $("recipe").innerHTML = `<div class="empty">Elegí algo de la lista para ver qué pide.</div>`; return; }
+  const q = Math.min(rsel.q, r.maxq);
+  const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
+    `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejora a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
+  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${esc(N(r.out))}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span></div>${lv}` +
+    `<div class="need">` + needs(r, q).map(([p, n]) => { const h = have(p);
+      return `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${esc(N(p))}<small>${h ? "ver en qué cofres" : "no hay en los cofres"}</small></span>` +
+        `<span class="q"><b class="${h >= n ? "ok" : "miss"}">${fmt(h)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
+    (r.one ? `<p class="note">Pide uno solo de estos, no todos.</p>` : "") +
+    `<p class="note">Cuenta lo guardado en cofres, carros y barcos, no lo que cada uno lleva encima.</p>`;
+}
+if (RC) {
+  $("falta").hidden = false;
+  $("rlist").onclick = e => { const b = e.target.closest("[data-i]"); if (!b) return; rsel.i = +b.dataset.i; rsel.q = 1;
+    try { localStorage.setItem("arcon-falta", JSON.stringify({ out: RC.recetas[rsel.i].out })); } catch (e) {}
+    document.querySelectorAll("#rlist .it").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.i === rsel.i))); renderRecipe();
+    if (matchMedia("(max-width: 820px)").matches) $("recipe").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  $("recipe").onclick = e => {
+    const c = e.target.closest("[data-q]"), it = e.target.closest("[data-p]");
+    if (c) { rsel.q = +c.dataset.q; renderRecipe(); }
+    else if (it && STOCK.has(it.dataset.p)) { select(it.dataset.p, false); $("buscar").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  };
+  $("rq").addEventListener("input", e => { rsel.text = e.target.value; renderRecipes(); });
+  renderRecipes(); renderRecipe();
+} else document.querySelector('nav.jump [href="#falta"]').remove();
 
 // Arranque: lo último elegido, o lo que más se movió.
 renderCats(); renderItems(); renderMovers();
