@@ -108,6 +108,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .legend .c { background: rgba(244, 187, 115, .75); }
 
 .places { padding: 6px 14px 10px; display: grid; font: .92rem var(--ui); }
+.places[hidden] { display: none; }
 .places h3 { padding: 6px 0 2px; }
 .places .pl { all: unset; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid rgba(255, 214, 160, .07); }
 .places .pl:hover span:first-child, .places .pl[aria-pressed="true"] span:first-child { color: var(--gold); }
@@ -157,23 +158,20 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .need .q b { font-weight: 700; }
 .ok { color: var(--green); } .miss { color: var(--red); }
 
-/* Pantalla ancha: "Dónde buscar" y "Qué me falta" lado a lado; el historial sigue abajo. */
-.duo { display: grid; gap: 34px; }
-@media (min-width: 1400px) {
+/* Ficha de fabricar: al lado del plano en pantalla ancha, arriba del plano en las medianas. */
+.finder { grid-template-areas: "list head" "list side" "list board"; }
+.picker { grid-area: list; } .board-head { grid-area: head; } .side { grid-area: side; } .board { grid-area: board; position: static; }
+.side .back { justify-self: start; }
+select.search { padding: 7px 10px; font-size: .9rem; }
+@media (min-width: 1300px) {
   .wrap { max-width: 1760px; }
-  .duo { grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); gap: 24px; align-items: start; }
-  #falta .forge { grid-template-columns: minmax(0, 1fr); }
-  #falta .items { max-height: 34vh; }
-  .part > .lead { min-height: 3em; }
+  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side"; }
 }
 
 @media (max-width: 820px) {
-  .forge { grid-template-columns: minmax(0, 1fr); }
-  .finder { grid-template-columns: minmax(0, 1fr); }
+  .finder { grid-template-columns: minmax(0, 1fr); grid-template-areas: "list" "head" "side" "board"; }
   .board { position: static; }
   /* Los filtros en un solo renglón que se desliza de costado, así la lista queda a la vista. */
-  #cats { flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 2px 12px 6px; scrollbar-width: none; }
-  #cats .chip { flex: none; }
   .plan svg { height: 52vh; }
   .items { max-height: 38vh; }
   .chart svg { height: 240px; }
@@ -187,41 +185,27 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
   <header class="panel">
     <h1>Arcón de Pancheim</h1>
     <div class="meta" id="meta"></div>
-    <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Dónde buscar</a><a class="chip" href="#falta">Qué me falta</a><a class="chip" href="#historial">Historial</a></nav>
+    <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Buscar y fabricar</a><a class="chip" href="#historial">Historial</a></nav>
   </header>
 
-  <div class="duo">
   <section class="part" id="buscar" aria-labelledby="h-buscar">
-    <h2 id="h-buscar">Dónde buscar</h2>
-    <p class="lead">Elegí qué necesitás y el plano marca los cofres de la base que lo tienen. Tocá un cofre del plano para ver todo lo que guarda.</p>
+    <h2 id="h-buscar">Buscar y fabricar</h2>
+    <p class="lead">Buscá algo y ves dónde está guardado y, si se fabrica, qué te falta.</p>
     <div class="finder">
       <div class="picker panel">
-        <input class="search" id="q" type="search" placeholder="Buscar: plata, silver, hidromiel…" aria-label="Buscar recurso">
-        <div class="row" id="cats"></div>
+        <input class="search" id="q" type="search" placeholder="Buscar: plata, silver, maza…" aria-label="Buscar">
+        <select class="search" id="cat" aria-label="Categoría"></select>
         <div class="items" id="items" role="list"></div>
       </div>
+      <div class="board-head panel" id="board-head"></div>
       <div class="board">
-        <div class="board-head panel" id="board-head"></div>
         <div class="plan"><svg id="plan" role="img" aria-label="Plano de la base, norte arriba"></svg></div>
-        <div class="legend"><span><i class="g"></i>Tiene lo que elegiste (el número es cuánto)</span><span><i class="c"></i>Otros cofres</span><span>Norte arriba</span></div>
+        <div class="legend"><span><i class="g"></i>Tiene lo que elegiste (el número es cuánto)</span><span><i class="c"></i>Otros cofres: tocalos para ver qué guardan</span></div>
         <div class="places panel" id="places"></div>
       </div>
+      <div class="side recipe panel" id="recipe"></div>
     </div>
   </section>
-
-  <section class="part" id="falta" aria-labelledby="h-falta" hidden>
-    <h2 id="h-falta">Qué me falta</h2>
-    <p class="lead">Elegí qué querés fabricar y te dice cuánto hay en los cofres de cada cosa que pide. Solo aparecen recetas con materiales que ya pasaron por el arcón: lo que todavía no encontraron, no se muestra.</p>
-    <div class="forge">
-      <div class="picker panel">
-        <input class="search" id="rq" type="search" placeholder="Fabricar: maza, mace, coraza…" aria-label="Buscar receta">
-        <div class="row" id="rfilter"></div>
-        <div class="items" id="rlist" role="list"></div>
-      </div>
-      <div class="recipe panel" id="recipe"></div>
-    </div>
-  </section>
-  </div>
 
   <section class="part" id="historial" aria-labelledby="h-hist">
     <h2 id="h-hist">Historial</h2>
@@ -238,7 +222,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
     <div class="movers" id="movers"></div>
   </section>
 
-  <p class="note">No cuenta lo que cada uno lleva encima, ni las tumbas, ni los trofeos colgados. También en texto: <a href="inventario.md">inventario.md</a> y <a href="inventario.json">inventario.json</a>.</p>
+  <p class="note">No cuenta lo que cada uno lleva encima, ni las tumbas, ni los trofeos colgados. Las recetas son solo de cosas que ya pasaron por el arcón: lo que todavía no encontraron no aparece. También en texto: <a href="inventario.md">inventario.md</a> y <a href="inventario.json">inventario.json</a>.</p>
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
@@ -283,29 +267,44 @@ $("meta").innerHTML =
   (D.world && D.world.day ? `<span>Día <b>${D.world.day}</b></span>` : "") +
   `<span><b>${BOXES.length}</b> cofres, carros y barcos</span><span><b>${STOCK.size}</b> cosas distintas guardadas</span>`;
 
-let state = { sel: null, box: null, q: "", cat: "Todo", range: "30" };
-try { const s = JSON.parse(localStorage.getItem("arcon-v2") || "null"); if (s) Object.assign(state, { sel: s.sel, cat: s.cat || "Todo", range: s.range || "30" }); } catch (e) {}
-const remember = () => { try { localStorage.setItem("arcon-v2", JSON.stringify({ sel: state.sel, cat: state.cat, range: state.range })); } catch (e) {} };
+let state = { sel: null, box: null, q: "", cat: "Todo", mode: "todo", range: "30", lvl: 1, back: null };
+try { const s = JSON.parse(localStorage.getItem("arcon-v3") || "null"); if (s) Object.assign(state, { sel: s.sel, cat: s.cat || "Todo", mode: s.mode || "todo", range: s.range || "30" }); } catch (e) {}
+const remember = () => { try { localStorage.setItem("arcon-v3", JSON.stringify({ sel: state.sel, cat: state.cat, mode: state.mode, range: state.range })); } catch (e) {} };
 
-// ---------- Parte 1: lista ----------
-const CATS = ["Todo", "Materiales", "Comida y pociones", "Trofeos", "Flechas", "Armas", "Armadura", "Escudos", "Herramientas", "Accesorios", "Otros"];
+// ---------- Recetas ----------
+const RC = D.recetas && D.recetas.recetas.length ? D.recetas : { recetas: [], estaciones: {} };
+const RECIPE = new Map();
+RC.recetas.forEach(r => { if (!RECIPE.has(r.out)) RECIPE.set(r.out, r); });
+const have = p => (STOCK.get(p) || { total: 0 }).total;
+// Lo que pide cada nivel: el 1 es la receta, del 2 en adelante la mejora (el juego multiplica por el nivel - 1).
+const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
+const missing = (r, q) => { const m = needs(r, q).filter(([p, n]) => have(p) < n).length; return r.one ? +(m === needs(r, q).length) : m; };
+// El mejor nivel de cada cosa guardada, para avisar que ya hay antes de fabricar otra.
+const BEST = new Map();
+BOXES.forEach(c => c.items.forEach(([p, , q]) => BEST.set(p, Math.max(BEST.get(p) || 0, q))));
+const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
+const craft = p => { const r = RECIPE.get(p); if (!r) return ""; const m = missing(r, 1);
+  return m ? `<span class="miss">le ${m === 1 ? "falta 1 cosa" : `faltan ${m} cosas`}</span>` : `<span class="ok">se puede fabricar</span>`; };
+
+// ---------- Parte 1: lista (lo guardado y lo que se fabrica, en una sola) ----------
+const ALL = [...new Set([...STOCK.keys(), ...RECIPE.keys()])];
+const CATS = ["Materiales", "Comida y pociones", "Trofeos", "Flechas", "Armas", "Armadura", "Escudos", "Herramientas", "Accesorios", "Otros"];
 function renderCats() {
-  const present = new Set([...STOCK.keys()].map(C));
-  $("cats").innerHTML = CATS.filter(c => c === "Todo" || present.has(c))
-    .map(c => `<button class="chip" data-cat="${c}" aria-pressed="${state.cat === c}">${c}</button>`).join("");
+  const present = new Set(ALL.map(C));
+  $("cat").innerHTML = `<option value="Todo">Todas las categorías</option>` + CATS.filter(c => present.has(c))
+    .map(c => `<option${state.cat === c ? " selected" : ""}>${c}</option>`).join("");
 }
-$("cats").onclick = e => { const b = e.target.closest("[data-cat]"); if (!b) return; state.cat = b.dataset.cat; remember(); renderCats(); renderItems(); };
+$("cat").onchange = e => { state.cat = e.target.value; remember(); renderItems(); };
 function renderItems() {
   const q = norm(state.q.trim());
-  const rows = [...STOCK.values()].filter(e => (state.cat === "Todo" || C(e.p) === state.cat) && hit(e.p, q))
-    .sort((a, b) => b.total - a.total || N(a.p).localeCompare(N(b.p), "es"));
-  $("items").innerHTML = rows.map(e => {
-    const inBase = [...e.at.keys()].filter(ci => inPlan(BOXES[ci])).length, out = e.at.size - inBase;
-    const where = [inBase ? `${inBase} ${inBase === 1 ? "cofre" : "cofres"} en la base` : "", out ? `${out} afuera` : ""].filter(Boolean).join(" · ");
-    return `<button class="it" role="listitem" data-p="${esc(e.p)}" aria-pressed="${state.sel === e.p}">${icon(e.p)}<span class="n">${NN(e.p)}<small>${where}</small></span><span class="num">${fmt(e.total)}</span></button>`;
-  }).join("") || `<div class="empty">Nada guardado con ese nombre.</div>`;
+  const rows = ALL.filter(p => (state.cat === "Todo" || C(p) === state.cat) && hit(p, q))
+    .sort((a, b) => have(b) - have(a) || N(a).localeCompare(N(b), "es"));
+  $("items").innerHTML = rows.map(p => {
+    const e = STOCK.get(p), sub = [e ? "" : "no hay guardado", craft(p)].filter(Boolean).join(" · ");
+    return `<button class="it" role="listitem" data-p="${esc(p)}" aria-pressed="${state.sel === p}">${icon(p)}<span class="n">${NN(p)}${sub ? `<small>${sub}</small>` : ""}</span><span class="num">${e ? fmt(e.total) : ""}</span></button>`;
+  }).join("") || `<div class="empty">No hay nada con ese nombre${state.cat !== "Todo" ? " en esta categoría" : ""}.</div>`;
 }
-$("items").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, true); };
+$("items").onclick = e => { const b = e.target.closest("[data-p]"); if (b) { state.back = null; select(b.dataset.p, true); } };
 $("q").addEventListener("input", e => { state.q = e.target.value; renderItems(); });
 
 // ---------- Parte 1: plano ----------
@@ -325,7 +324,7 @@ function renderPlan() {
   svg.setAttribute("viewBox", planView().join(" "));
   const e = state.sel && STOCK.get(state.sel);
   const boxes = BOXES.map((c, ci) => !inPlan(c) || (e && e.at.has(ci)) ? "" :
-    `<rect class="box${state.box === ci ? " open" : ""}" data-ci="${ci}" x="${c.p[0] - .8}" y="${c.p[1] - .8}" width="1.6" height="1.6"><title>${esc(place(c))}</title></rect>`).join("");
+    `<rect class="box${state.box === ci ? " open" : ""}" data-ci="${ci}" x="${c.p[0] - .8}" y="${c.p[1] - .8}" width="1.6" height="1.6"><title>${esc(c.kind)}</title></rect>`).join("");
   let pins = "";
   if (e) {
     // Cofres apilados (a menos de 1,5 m) van en un solo pin con la suma.
@@ -338,7 +337,7 @@ function renderPlan() {
     const max = Math.max(...groups.map(g => g.n));
     pins = groups.sort((a, b) => a.n - b.n).map(({ x, y, n, cis }) => {
       const r = 1.5 + 1.3 * Math.sqrt(n / max);
-      return `<circle class="halo" cx="${x}" cy="${y}" r="${r + 1.6}"/><circle class="hit${cis.includes(state.box) ? " open" : ""}" data-ci="${cis[0]}" cx="${x}" cy="${y}" r="${r}"><title>${cis.length > 1 ? `${cis.length} cofres juntos` : esc(place(BOXES[cis[0]]))}: ${fmt(n)}</title></circle>` +
+      return `<circle class="halo" cx="${x}" cy="${y}" r="${r + 1.6}"/><circle class="hit${cis.includes(state.box) ? " open" : ""}" data-ci="${cis[0]}" cx="${x}" cy="${y}" r="${r}"><title>${fmt(n)}</title></circle>` +
         `<text class="tag" x="${x}" y="${y}">${n >= 1000 ? Math.round(n / 100) / 10 + "k" : n}</text>`;
     }).join("");
   }
@@ -350,45 +349,60 @@ $("plan").addEventListener("click", ev => {
   renderPlan(); renderPlaces();
 });
 
+const outside = e => [...e.at].reduce((t, [ci, n]) => t + (inPlan(BOXES[ci]) ? 0 : n), 0);
 function renderBoardHead() {
-  const e = state.sel && STOCK.get(state.sel);
-  $("board-head").innerHTML = e
-    ? `${icon(e.p, "lg")}<span class="t"><b>${NN(e.p)}</b><span>${fmt(e.total)} guardados en ${e.at.size} ${e.at.size === 1 ? "lugar" : "lugares"}</span></span><a class="chip" href="#historial">Ver historial</a>`
-    : `<span class="t"><b>Elegí un recurso</b><span>Buscalo en la lista o tocá un cofre del plano.</span></span>`;
+  const p = state.sel, e = p && STOCK.get(p);
+  $("board-head").innerHTML = p
+    ? `${icon(p, "lg")}<span class="t"><b>${NN(p)}</b><span>${e ? `${fmt(e.total)} guardado${e.total > 1 ? "s" : ""}${outside(e) ? ` (${fmt(outside(e))} fuera de la base)` : ""}${BEST.get(p) > 1 ? `, el mejor de nivel ${BEST.get(p)}` : ""}` : "No hay guardado"}</span></span>${R.items[p] ? `<a class="chip" href="#historial">Historial</a>` : ""}`
+    : `<span class="t"><b>Elegí algo de la lista</b><span>O tocá un cofre del plano para ver qué guarda.</span></span>`;
 }
+function renderRecipe() {
+  const p = state.sel, r = p && RECIPE.get(p);
+  const back = state.back ? `<button class="chip back" data-back="${esc(state.back)}">← Volver a ${esc(N(state.back))}</button>` : "";
+  if (!r) { $("recipe").innerHTML = back + `<h3>Para fabricarlo</h3><div class="empty" style="padding:4px 0">${p ? "No se fabrica, o la receta pide algo que todavía no pasó por el arcón." : "Elegí algo de la lista."}</div>`; return; }
+  const q = Math.min(state.lvl, r.maxq), h = have(p);
+  const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
+    `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejorar a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
+  const m = missing(r, q);
+  $("recipe").innerHTML = back + `<h3>Para fabricarlo${r.n > 1 ? ` (salen ${r.n})` : ""}</h3>` +
+    (h ? `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>` : "") + lv +
+    `<div class="muted" style="font: .9rem var(--ui)">En: ${esc(station(r, q))}</div>` +
+    `<div class="need">` + needs(r, q).map(([i, n]) => { const hi = have(i);
+      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${NN(i)}<small>${hi ? "tocá para ver dónde está" : "no hay en los cofres"}</small></span>` +
+        `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
+    (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "") +
+    `<p class="note"><b class="${m ? "miss" : "ok"}">${m ? (r.one ? "No hay ninguno guardado." : `Falta${m > 1 ? "n" : ""} ${m} ${m > 1 ? "cosas" : "cosa"}.`) : "Hay todo en los cofres."}</b></p>`;
+}
+$("recipe").onclick = e => {
+  const c = e.target.closest("[data-q]"), b = e.target.closest("[data-back]"), it = e.target.closest("[data-p]");
+  if (c) { state.lvl = +c.dataset.q; renderRecipe(); }
+  else if (b) { const p = b.dataset.back; state.back = null; select(p, false); }
+  else if (it) { state.back = state.sel; select(it.dataset.p, false); }
+};
 function renderPlaces() {
-  const e = state.sel && STOCK.get(state.sel);
   let html = "";
   if (state.box !== null) {
     const c = BOXES[state.box], agg = new Map();
     for (const [p, s] of c.items) agg.set(p, (agg.get(p) || 0) + s);
-    html += `<h3>${esc(c.kind)} · <span class="coord">${c.x}, ${c.z}</span></h3><div class="contents">` +
+    html += `<h3>Este ${esc(c.kind.toLowerCase())} guarda</h3><div class="contents">` +
       [...agg.entries()].sort((a, b) => b[1] - a[1]).map(([p, n]) =>
         `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${NN(p)}</span><span class="num">${fmt(n)}</span></button>`).join("") + `</div>`;
   }
-  if (e) {
-    const at = [...e.at.entries()].sort((a, b) => b[1] - a[1]);
-    const base = at.filter(([ci]) => inPlan(BOXES[ci])), out = at.filter(([ci]) => !inPlan(BOXES[ci]));
-    const row = ([ci, n], btn) => btn
-      ? `<button class="pl" data-ci="${ci}" aria-pressed="${state.box === ci}"><span>${esc(place(BOXES[ci]))}</span><span class="num">${fmt(n)}</span></button>`
-      : `<div class="pl"><span>${esc(place(BOXES[ci]))}</span><span class="num">${fmt(n)}</span></div>`;
-    if (base.length) html += `<h3>En la base</h3>` + base.map(x => row(x, true)).join("");
-    if (out.length) html += `<h3>Fuera de la base</h3>` + out.map(x => row(x, false)).join("");
-  }
-  $("places").innerHTML = html || `<div class="empty">Acá aparece en qué cofres está lo que elijas.</div>`;
-  $("places").hidden = false;
+  $("places").innerHTML = html;
+  $("places").hidden = !html;
 }
 $("places").addEventListener("click", ev => {
   const pl = ev.target.closest("button.pl"), it = ev.target.closest(".contents [data-p]");
   if (pl) { state.box = +pl.dataset.ci; renderPlan(); renderPlaces(); }
-  else if (it) select(it.dataset.p, false);
+  else if (it) { state.back = null; select(it.dataset.p, false); }
 });
 
 function select(p, fromList) {
+  if (p !== state.sel) state.lvl = 1;
   state.sel = p; state.box = null;
   remember();
   document.querySelectorAll("#items .it").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
-  renderBoardHead(); renderPlan(); renderPlaces(); renderHistory();
+  renderBoardHead(); renderRecipe(); renderPlan(); renderPlaces(); renderHistory();
   if (!fromList) { const b = document.querySelector(`#items .it[data-p="${CSS.escape(p)}"]`); if (b) b.scrollIntoView({ block: "nearest" }); }
   // En el celu el plano queda abajo de la lista: al elegir, bajar hasta el plano.
   else if (booted && matchMedia("(max-width: 820px)").matches) $("board-head").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -483,64 +497,9 @@ function renderMovers() {
 }
 $("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, false); };
 
-// ---------- Parte 2: qué me falta ----------
-const RC = D.recetas && D.recetas.recetas.length ? D.recetas : null;
-const have = p => (STOCK.get(p) || { total: 0 }).total;
-// Lo que pide cada nivel: el 1 es la receta, del 2 en adelante la mejora (el juego multiplica por el nivel - 1).
-const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
-const missing = (r, q) => { const m = needs(r, q).filter(([p, n]) => have(p) < n).length; return r.one ? +(m === needs(r, q).length) : m; };
-// El mejor nivel de cada cosa guardada, para avisar que ya hay antes de fabricar otra.
-const BEST = new Map();
-BOXES.forEach(c => c.items.forEach(([p, , q]) => BEST.set(p, Math.max(BEST.get(p) || 0, q))));
-const already = p => have(p) ? `ya hay ${fmt(have(p))}${BEST.get(p) > 1 ? ` (hasta nivel ${BEST.get(p)})` : ""}` : "";
-const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
-let rsel = { i: null, q: 1, text: "", f: "todo" };
-const RF = { todo: "Todo", puede: "Se puede", falta: "Falta algo" };
-try { const s = JSON.parse(localStorage.getItem("arcon-falta") || "null"); if (s) rsel.i = RC && RC.recetas.findIndex(r => r.out === s.out); if (rsel.i < 0) rsel.i = null; } catch (e) {}
-function renderRecipes() {
-  const q = norm(rsel.text.trim());
-  const all = RC.recetas.map((r, i) => ({ r, i, m: missing(r, 1) }));
-  const n = { todo: all.length, puede: all.filter(x => !x.m).length, falta: all.filter(x => x.m).length };
-  $("rfilter").innerHTML = Object.entries(RF).map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${rsel.f === k}">${l} · ${n[k]}</button>`).join("");
-  const rows = all.filter(({ r, m }) => (rsel.f === "todo" || (rsel.f === "puede") === !m) && hit(r.out, q))
-    .sort((a, b) => N(a.r.out).localeCompare(N(b.r.out), "es"));
-  $("rlist").innerHTML = rows.map(({ r, i, m }) =>
-    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${NN(r.out)}<small>${esc(station(r, 1))}${have(r.out) ? ` · <span class="ok">${already(r.out)}</span>` : ""}</small></span>` +
-    `<span class="num ${m ? "miss" : "ok"}">${m ? `faltan ${m}` : "se puede"}</span></button>`).join("") || `<div class="empty">No hay recetas con ese nombre (o piden algo que todavía no pasó por el arcón).</div>`;
-}
-function renderRecipe() {
-  const r = RC.recetas[rsel.i];
-  if (!r) { $("recipe").innerHTML = `<div class="empty">Elegí algo de la lista para ver qué pide.</div>`; return; }
-  const q = Math.min(rsel.q, r.maxq);
-  const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
-    `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejora a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
-  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${NN(r.out)}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span>${have(r.out) ? `<button class="chip" data-have="${esc(r.out)}">Ver dónde</button>` : ""}</div>` +
-    (have(r.out) ? `<p class="note"><b class="ok">${already(r.out)[0].toUpperCase() + already(r.out).slice(1)} en los cofres.</b> Fijate antes de fabricar uno nuevo.</p>` : "") + `${lv}` +
-    `<div class="need">` + needs(r, q).map(([p, n]) => { const h = have(p);
-      return `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${NN(p)}<small>${h ? "ver en qué cofres" : "no hay en los cofres"}</small></span>` +
-        `<span class="q"><b class="${h >= n ? "ok" : "miss"}">${fmt(h)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
-    (r.one ? `<p class="note">Pide uno solo de estos, no todos.</p>` : "") +
-    `<p class="note">Cuenta lo guardado en cofres, carros y barcos, no lo que cada uno lleva encima.</p>`;
-}
-if (RC) {
-  $("falta").hidden = false;
-  $("rlist").onclick = e => { const b = e.target.closest("[data-i]"); if (!b) return; rsel.i = +b.dataset.i; rsel.q = 1;
-    try { localStorage.setItem("arcon-falta", JSON.stringify({ out: RC.recetas[rsel.i].out })); } catch (e) {}
-    document.querySelectorAll("#rlist .it").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.i === rsel.i))); renderRecipe();
-    if (matchMedia("(max-width: 820px)").matches) $("recipe").scrollIntoView({ behavior: "smooth", block: "start" }); };
-  $("recipe").onclick = e => {
-    const c = e.target.closest("[data-q]"), it = e.target.closest("[data-p], [data-have]");
-    if (c) { rsel.q = +c.dataset.q; renderRecipe(); }
-    else if (it && STOCK.has(it.dataset.p || it.dataset.have)) { select(it.dataset.p || it.dataset.have, false); $("buscar").scrollIntoView({ behavior: "smooth", block: "start" }); }
-  };
-  $("rfilter").onclick = e => { const b = e.target.closest("[data-f]"); if (b) { rsel.f = b.dataset.f; renderRecipes(); } };
-  $("rq").addEventListener("input", e => { rsel.text = e.target.value; renderRecipes(); });
-  renderRecipes(); renderRecipe();
-} else document.querySelector('nav.jump [href="#falta"]').remove();
-
 // Arranque: lo último elegido, o lo que más se movió.
 renderCats(); renderItems(); renderMovers();
-if (!state.sel || !STOCK.has(state.sel) && !R.items[state.sel]) { const m = document.querySelector("#movers .mv"); state.sel = m ? m.dataset.p : ([...STOCK.values()].sort((a, b) => b.total - a.total)[0] || {}).p || null; }
+if (!state.sel || !STOCK.has(state.sel) && !R.items[state.sel] && !RECIPE.has(state.sel)) { const m = document.querySelector("#movers .mv"); state.sel = m ? m.dataset.p : ([...STOCK.values()].sort((a, b) => b.total - a.total)[0] || {}).p || null; }
 select(state.sel, true);
 booted = true;
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.sel && renderChart(state.sel), 150); });
