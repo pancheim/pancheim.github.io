@@ -14,6 +14,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import historial
+import registro
 from mundo import World
 from plan import Plan
 from texto import to_json, to_markdown
@@ -25,7 +26,8 @@ NAMES = json.load(open(os.path.join(ROOT, "data", "names.json"), encoding="utf-8
 
 KIND = {"piece_chest_wood": "Cofre", "piece_chest": "Cofre reforzado", "piece_chest_private": "Cofre personal",
         "piece_chest_blackmetal": "Cofre de metal negro", "Cart": "Carro", "Karve": "Karve",
-        "VikingShip": "Drakkar", "Player_tombstone": "Tumba"}
+        "VikingShip": "Drakkar", "VikingShip_Ashlands": "Drakkar de las Cenizas", "Raft": "Balsa",
+        "Player_tombstone": "Tumba"}
 STATIONS = {"fermenter": "Fermentador", "smelter": "Fundición", "charcoal_kiln": "Horno de carbón",
             "blastfurnace": "Alto horno", "piece_spinningwheel": "Rueca", "windmill": "Molino",
             "eitrrefinery": "Refinería de eitr"}
@@ -124,9 +126,12 @@ def main(world_dir, out_path):
     data = build(world_dir)
     # Historial: se compara con lo publicado antes (el workflow lo baja a PREV_DIR).
     data["history"] = historial.update(os.environ.get("PREV_DIR"), data["saved"], historial.totals(data["containers"]))
-    for h in data["history"]:
-        for p in (*h["entro"], *h["salio"]):
-            data["names"].setdefault(p, NAMES.get(p, {"es": p, "cat": "Otros"}))
+    # Registro completo (rama `registro`, el workflow la saca a REGISTRO y la sube despues).
+    rows = registro.update(os.environ.get("REGISTRO"), data["saved"], data["world"].get("day"),
+                           registro.totals(data["containers"]))
+    data["registro"] = registro.series(rows)
+    for p in (*(p for h in data["history"] for p in (*h["entro"], *h["salio"])), *data["registro"]["items"]):
+        data["names"].setdefault(p, NAMES.get(p, {"es": p, "cat": "Otros"}))
     out_dir = os.path.dirname(os.path.abspath(out_path))
     data["icons"] = copy_icons(data["names"], os.path.join(out_dir, "icons"))
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()

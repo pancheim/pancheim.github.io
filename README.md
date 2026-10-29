@@ -41,24 +41,27 @@ Además de la página, cada corrida publica:
 - [`historial.json`](https://pancheim.github.io/historial.json): qué entró y
   qué salió de los cofres entre una publicación y la siguiente (las últimas 50).
 
-## Qué más muestra
+## Qué muestra
 
-Además de los cofres, la página lee del mundo:
+La página tiene dos partes, y solo cuenta lo guardado en cofres, carros y barcos
+(las tumbas no):
 
-- **Jefes**: cuáles cayeron (las marcas globales del mundo), el siguiente y
-  cuántas invocaciones alcanzan con lo guardado. Sin spoilers: los jefes que
-  vienen después del siguiente no se muestran.
-- **Para sacar en la base**: miel de las colmenas, plumas de los nidos y
-  cultivos listos.
-- **Portales**: nombre, quién lo puso y si tiene pareja. Un espacio de más al
-  final del nombre ya los separa.
-- **Últimos cambios**: no hay base de datos; la página publicada es la memoria.
-  Antes de armar, el workflow baja el `inventario.json` y el `historial.json`
-  publicados y `arcon/historial.py` agrega la diferencia.
-- Día del mundo y de quién es cada tumba.
+- **Dónde buscar**: la lista de lo guardado con buscador y, al lado, el plano de
+  la base visto desde arriba. Al elegir algo, el plano marca los cofres que lo
+  tienen y cuánto hay en cada uno; tocando un cofre se ve todo lo que guarda.
+  Lo que está fuera de la base aparece abajo, con coordenadas.
+- **Historial**: cuánto había de cada cosa guardado por guardado (7 días, 30 días
+  o todo), lo que más se movió y los últimos cambios.
 
-Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (nombres de los jugadores),
-`_main.N.db2` (marcas globales) y los objetos de los chunks.
+El historial sale del **registro**: la rama
+[`registro`](https://github.com/pancheim/pancheim.github.io/tree/registro) tiene
+`registro.jsonl`, una línea con los totales de cada guardado en que cambió algo.
+El workflow saca esa rama, `arcon/registro.py` agrega la línea nueva y el workflow
+la sube. Arranca el 29/09 con los guardados que había en los zips de G-Portal; del
+20/10 al 28/10 se rearmó con los cambios que anotaba la página (`"rearmado": true`).
+
+Jefes, portales y colmenas ya no salen en la página, pero siguen en `inventario.md`
+y `inventario.json` (salen de `arcon/mundo.py`).
 
 ## Cosas a saber
 
@@ -75,6 +78,8 @@ Todo eso sale de `arcon/mundo.py`, que lee `_main.N.fwl2` (nombres de los jugado
   ```
   python arcon/build.py <carpeta_del_mundo> site/index.html
   ```
+
+  Con `REGISTRO=<ruta>/registro.jsonl` usa (y agrega a) ese registro.
 
 ## De dónde sale cada cosa
 

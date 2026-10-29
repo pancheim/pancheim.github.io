@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write   # para sumar cada guardado a la rama registro
   pages: write
   id-token: write
 
@@ -23,6 +23,11 @@ jobs:
       skip: ${{ steps.diff.outputs.skip }}
     steps:
       - uses: actions/checkout@v5
+      # Registro completo de lo guardado: una linea por guardado en la rama registro.
+      - uses: actions/checkout@v5
+        with:
+          ref: registro
+          path: registro
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -49,7 +54,15 @@ jobs:
           mkdir -p prev
           curl -fsL '${{ steps.pages.outputs.base_url }}/inventario.json' -o prev/inventario.json || true
           curl -fsL '${{ steps.pages.outputs.base_url }}/historial.json' -o prev/historial.json || true
-          PREV_DIR=prev python arcon/build.py world site/index.html
+          PREV_DIR=prev REGISTRO=registro/registro.jsonl python arcon/build.py world site/index.html
+      - name: Subir el registro
+        working-directory: registro
+        run: |
+          if git diff --quiet; then echo "Registro sin cambios."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898783+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "Guardado $(tail -n1 registro.jsonl | cut -c7-28)"
+          git push -q
       # En las corridas programadas, si cofres, estaciones y plano son iguales a lo publicado,
       # no se republica (el servidor guarda aunque nadie juegue). A mano o al subir codigo, siempre.
       - name: Ver si cambio algo
