@@ -15,6 +15,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import historial
+import mapa
 import registro
 import relieve
 from mundo import World
@@ -188,6 +189,8 @@ def main(world_dir, out_path):
     # Fondo del plano: relieve con las murallas y el agua (si esta la altura generada de la base).
     if data["plan"]:
         data["plan"]["relieve"] = relieve.render(world_dir, out_dir)
+    # Mapa del clan: terreno solo donde registraron en la mesa de cartografia (necesita MAP_KEY).
+    data["mapa"] = mapa.render(world_dir, out_dir)
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     os.makedirs(out_dir, exist_ok=True)

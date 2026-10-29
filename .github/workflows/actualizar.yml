@@ -50,6 +50,9 @@ jobs:
           restore-keys: iconos-
       # El historial compara con lo publicado: se baja antes de armar (si no existe, arranca vacio).
       - name: Armar la pagina
+        env:
+          # Clave del terreno cifrado (data/mapa_terreno.bin): sin ella la pestana Mapa sale sin terreno.
+          MAP_KEY: ${{ secrets.MAP_KEY }}
         run: |
           mkdir -p prev
           curl -fsL '${{ steps.pages.outputs.base_url }}/inventario.json' -o prev/inventario.json || true

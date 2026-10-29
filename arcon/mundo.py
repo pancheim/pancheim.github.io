@@ -38,6 +38,14 @@ CROPS = {  # lo que se cosecha (ya crecido) y lo que esta creciendo
     "Pickable_Mushroom_JotunPuffs": "Bufasetas de Jotun", "Pickable_Mushroom_Magecap": "Gorromago",
 }
 PORTALS = {"portal_wood", "portal", "portal_stone"}
+# Construcciones que la pagina cuenta en su ficha: cuantas hay y junto a que portal del clan (sin
+# coordenadas: lo que el clan construyo, contado desde sus propios portales). prefab: tope de "level".
+BUILT = {"piece_sapcollector": 10, "piece_beehive": 4, "fermenter": 0, "smelter": 0, "blastfurnace": 0,
+         "charcoal_kiln": 0, "eitrrefinery": 0, "windmill": 0, "piece_spinningwheel": 0, "forge": 0, "blackforge": 0,
+         "piece_workbench": 0, "piece_artisanstation": 0, "piece_magetable": 0, "piece_cauldron": 0,
+         "piece_MeadCauldron": 0, "piece_oven": 0, "piece_bed02": 0, "bed": 0, "piece_wisplure": 0,
+         "piece_cartographytable": 0, "piece_stonecutter": 0, "piece_preptable": 0, "piece_cookingstation": 0,
+         "piece_cookingstation_iron": 0, "piece_bathtub": 0}
 TAG, TAG_AUTHOR, LEVEL = stable_hash("tag"), stable_hash("tagauthor"), stable_hash("level")
 
 
@@ -111,6 +119,7 @@ class World:
     def __init__(self, world_dir, base, radius, names):
         self.base, self.radius, self.names = base, radius, names
         self.portals, self.hives, self.nests = [], [], []
+        self.built = {}
         self.crops = {}
         fwl = _latest(world_dir, "fwl2")
         db = _latest(world_dir, "db2")
@@ -128,6 +137,8 @@ class World:
         if not prefab or z["pos"] is None:
             return
         x, _, zz = z["pos"]
+        if prefab in BUILT:
+            self.built.setdefault(prefab, []).append((x, zz, z.get("ints", {}).get(LEVEL, 0)))
         if prefab in PORTALS:
             strs = z.get("strs", {})
             author = strs.get(TAG_AUTHOR, "")
@@ -141,6 +152,32 @@ class World:
         elif prefab.startswith("sapling_") and self._dist(x, zz) < self.radius:
             key = "growing:" + prefab
             self.crops[key] = self.crops.get(key, 0) + 1
+
+    def _built(self):
+        """Por construccion: grupos {donde, cuantas, nivel acumulado, llenas}. Donde = "base" o el portal
+        conectado mas cercano con distancia y rumbo."""
+        refs = [p for p in self.portals if p["pair"] == 2 and p["tag"].strip()]
+        dirs = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]
+        out = {}
+        for prefab, items in self.built.items():
+            groups = {}
+            for x, zz, lv in items:
+                if self._dist(x, zz) < self.radius or not refs:
+                    key = ("base", 0, "")
+                else:
+                    p = min(refs, key=lambda p: math.hypot(p["x"] - x, p["z"] - zz))
+                    d = math.hypot(p["x"] - x, p["z"] - zz)
+                    rumbo = dirs[int(((math.degrees(math.atan2(x - p["x"], zz - p["z"])) + 360) % 360 + 22.5) // 45) % 8]
+                    key = (p["tag"], round(d, -1) if d >= 40 else 0, rumbo if d >= 40 else "")
+                g = groups.setdefault(key, {"at": key[0], "m": key[1], "dir": key[2], "n": 0, "lv": 0, "full": 0, "pts": []})
+                g["n"] += 1
+                if key[0] != "base":   # para el mapa del clan: donde esta cada una (x, z) y su nivel
+                    g["pts"].append([round(x), round(zz), lv])
+                if BUILT[prefab]:
+                    g["lv"] += lv
+                    g["full"] += lv >= BUILT[prefab]
+            out[prefab] = {"max": BUILT[prefab], "groups": sorted(groups.values(), key=lambda g: (g["at"] != "base", -g["n"]))}
+        return out
 
     def summary(self, stored):
         """stored: {prefab: cantidad} de todo lo guardado, para contar invocaciones."""
@@ -161,12 +198,13 @@ class World:
             p["pair"] = count[p["tag"]]
         self.portals.sort(key=lambda p: (p["pair"] == 2, p["tag"].lower()))
 
+        built = self._built()
         crops = [{"name": CROPS[k], "n": n} for k, n in self.crops.items() if not k.startswith("growing:")]
         growing = [{"name": self.names.get(k[8:], {}).get("es", k[8:].replace("sapling_", "")), "n": n}
                    for k, n in self.crops.items() if k.startswith("growing:")]
         # La seed no se publica: con ella se puede ver el mapa entero (spoiler).
         return {"day": self.db["day"], "bosses": bosses,
-                "portals": self.portals,
+                "portals": self.portals, "built": built,
                 "hives": {"n": len(self.hives), "ready": sum(h["n"] for h in self.hives), "full": sum(h["n"] >= 4 for h in self.hives)},
                 "nests": {"n": len(self.nests), "ready": sum(h["n"] for h in self.nests), "full": sum(h["n"] >= 4 for h in self.nests)},
                 "crops": sorted(crops, key=lambda c: -c["n"]), "growing": sorted(growing, key=lambda c: -c["n"])}
