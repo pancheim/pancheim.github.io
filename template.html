@@ -136,9 +136,6 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .mv .n { overflow-wrap: anywhere; line-height: 1.25; }
 .mv .n small { display: block; color: var(--muted); font-size: .78rem; }
 .mv .d { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
-.list { padding: 6px 14px; display: grid; }
-.list > div { display: grid; gap: 2px; padding: 7px 0; border-top: 1px solid rgba(255, 214, 160, .07); font: .9rem var(--ui); }
-.list > div:first-child { border-top: 0; }
 
 @media (max-width: 820px) {
   .finder { grid-template-columns: minmax(0, 1fr); }
@@ -190,9 +187,6 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
     </div>
     <h3 id="movers-h">Lo que más se movió</h3>
     <div class="movers" id="movers"></div>
-    <h3>Últimos cambios</h3>
-    <div class="list panel" id="history"></div>
-    <p class="note" id="hist-note"></p>
   </section>
 
   <p class="note">No cuenta lo que cada uno lleva encima, ni las tumbas, ni los trofeos colgados. También en texto: <a href="inventario.md">inventario.md</a> y <a href="inventario.json">inventario.json</a>.</p>
@@ -436,14 +430,6 @@ function renderMovers() {
     || `<div class="empty">Nada cambió en este período.</div>`;
 }
 $("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, false); };
-
-$("history").innerHTML = (D.history || []).slice(0, 12).map(h => {
-  const parts = Object.entries(h.entro).map(([p, n]) => `<span class="plus">+${fmt(n)} ${esc(N(p))}</span>`)
-    .concat(Object.entries(h.salio).map(([p, n]) => `<span class="minus">−${fmt(n)} ${esc(N(p))}</span>`));
-  return `<div><span class="coord">${when(new Date(h.desde))} → ${when(new Date(h.hasta))}</span><span>${parts.slice(0, 14).join(", ")}${parts.length > 14 ? ` y ${parts.length - 14} más` : ""}</span></div>`;
-}).join("") || `<div class="empty">Todavía no hay cambios.</div>`;
-if (RT.length) $("hist-note").textContent = `Registro desde el ${day(new Date(RT[0]))}: ${RT.length} guardados con cambios.` +
-  (REARM.size ? " La franja más clara se rearmó con los cambios que anotaba la página, porque de esos días no hay guardados completos." : "");
 
 // Arranque: lo último elegido, o lo que más se movió.
 renderCats(); renderItems(); renderMovers();

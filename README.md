@@ -51,7 +51,7 @@ La página tiene dos partes, y solo cuenta lo guardado en cofres, carros y barco
   tienen y cuánto hay en cada uno; tocando un cofre se ve todo lo que guarda.
   Lo que está fuera de la base aparece abajo, con coordenadas.
 - **Historial**: cuánto había de cada cosa guardado por guardado (7 días, 30 días
-  o todo), lo que más se movió y los últimos cambios.
+  o todo) y lo que más se movió.
 
 El historial sale del **registro**: la rama
 [`registro`](https://github.com/pancheim/pancheim.github.io/tree/registro) tiene
