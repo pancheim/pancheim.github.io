@@ -105,6 +105,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .legend { color: var(--muted); font: .82rem var(--ui); display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border: 1px solid #1a0f08; }
 .legend .g { background: var(--gold); border-radius: 50%; }
+.need .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; border: 1px solid #1a0f08; }
 .legend .c { background: rgba(244, 187, 115, .75); }
 
 .places { padding: 6px 14px 10px; display: grid; font: .92rem var(--ui); }
@@ -200,7 +201,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
       <div class="board-head panel" id="board-head"></div>
       <div class="board">
         <div class="plan"><svg id="plan" role="img" aria-label="Plano de la base, norte arriba"></svg></div>
-        <div class="legend"><span><i class="g"></i>Tiene lo que elegiste (el número es cuánto)</span><span><i class="c"></i>Otros cofres: tocalos para ver qué guardan</span></div>
+        <div class="legend" id="legend"></div>
         <div class="places panel" id="places"></div>
       </div>
       <div class="side recipe panel" id="recipe"></div>
@@ -317,30 +318,43 @@ function planView() {
   return VIEW = [Math.min(...xs) - 14, Math.min(...ys) - 14, Math.max(...xs) - Math.min(...xs) + 28, Math.max(...ys) - Math.min(...ys) + 28].map(v => +v.toFixed(1));
 }
 let PLAN_BASE = "";
+// Qué se marca en el plano: lo elegido (dorado) y lo que pide su receta, cada cosa con su color.
+const COLORS = ["#6ec6ff", "#ff8a65", "#c5a3ff", "#8bd17c", "#ff8fc0", "#ffe08a"];
+function targets() {
+  const p = state.sel, r = p && RECIPE.get(p), out = [];
+  if (p && STOCK.has(p)) out.push({ p, col: "#f2cc2a" });
+  if (r) needs(r, Math.min(state.lvl, r.maxq)).forEach(([i], k) => { if (STOCK.has(i) && i !== p) out.push({ p: i, col: COLORS[k % COLORS.length] }); });
+  return out;
+}
+const colorOf = i => (targets().find(t => t.p === i) || {}).col;
 function renderPlan() {
   const svg = $("plan");
   if (!P) { svg.outerHTML = `<div class="empty">No hay plano de la base.</div>`; return; }
   if (!PLAN_BASE) PLAN_BASE = ["floor_wood", "floor_stone", "stake", "wall_wood", "wall_stone"].map(k => P.layers[k] ? `<path class="${k}" d="${P.layers[k]}"/>` : "").join("");
   svg.setAttribute("viewBox", planView().join(" "));
-  const e = state.sel && STOCK.get(state.sel);
-  const boxes = BOXES.map((c, ci) => !inPlan(c) || (e && e.at.has(ci)) ? "" :
+  const T = targets(), marked = new Set(T.flatMap(t => [...STOCK.get(t.p).at.keys()]));
+  const boxes = BOXES.map((c, ci) => !inPlan(c) || marked.has(ci) ? "" :
     `<rect class="box${state.box === ci ? " open" : ""}" data-ci="${ci}" x="${c.p[0] - .8}" y="${c.p[1] - .8}" width="1.6" height="1.6"><title>${esc(c.kind)}</title></rect>`).join("");
-  let pins = "";
-  if (e) {
-    // Cofres apilados (a menos de 1,5 m) van en un solo pin con la suma.
-    const groups = [];
-    for (const [ci, n] of e.at) {
+  // Cofres apilados (a menos de 1,5 m) van juntos; si un lugar tiene varias cosas marcadas, los pines se abren en ronda.
+  const groups = [];
+  T.forEach((t, ti) => {
+    for (const [ci, n] of STOCK.get(t.p).at) {
       if (!inPlan(BOXES[ci])) continue;
-      const [x, y] = BOXES[ci].p, g = groups.find(g => Math.hypot(g.x - x, g.y - y) < 1.5);
-      if (g) { g.n += n; g.cis.push(ci); } else groups.push({ x, y, n, cis: [ci] });
+      const [x, y] = BOXES[ci].p;
+      let g = groups.find(g => Math.hypot(g.x - x, g.y - y) < 1.5);
+      if (!g) groups.push(g = { x, y, cis: [], hits: new Map() });
+      g.cis.push(ci); g.hits.set(ti, (g.hits.get(ti) || 0) + n);
     }
-    const max = Math.max(...groups.map(g => g.n));
-    pins = groups.sort((a, b) => a.n - b.n).map(({ x, y, n, cis }) => {
-      const r = 1.5 + 1.3 * Math.sqrt(n / max);
-      return `<circle class="halo" cx="${x}" cy="${y}" r="${r + 1.6}"/><circle class="hit${cis.includes(state.box) ? " open" : ""}" data-ci="${cis[0]}" cx="${x}" cy="${y}" r="${r}"><title>${fmt(n)}</title></circle>` +
-        `<text class="tag" x="${x}" y="${y}">${n >= 1000 ? Math.round(n / 100) / 10 + "k" : n}</text>`;
-    }).join("");
-  }
+  });
+  const label = n => n >= 1000 ? Math.round(n / 100) / 10 + "k" : n;
+  const pins = groups.map(({ x, y, cis, hits }) => [...hits].map(([ti, n], k, all) => {
+    const a = 2 * Math.PI * k / all.length, d = all.length > 1 ? 2.2 : 0, cx = x + d * Math.sin(a), cy = y - d * Math.cos(a), r = T.length > 1 ? 1.8 : 2.4;
+    return `<circle class="halo" cx="${cx}" cy="${cy}" r="${r + 1.2}" style="fill:${T[ti].col};stroke:${T[ti].col}"/>` +
+      `<circle class="hit${cis.includes(state.box) ? " open" : ""}" data-ci="${cis[0]}" cx="${cx}" cy="${cy}" r="${r}" style="fill:${T[ti].col}"><title>${esc(N(T[ti].p))}: ${fmt(n)}</title></circle>` +
+      `<text class="tag" x="${cx}" y="${cy}">${label(n)}</text>`;
+  }).join("")).join("");
+  $("legend").innerHTML = (T.length ? T.map(t => `<span><i class="g" style="background:${t.col}"></i>${esc(N(t.p))}</span>`).join("") : "") +
+    `<span><i class="c"></i>Otros cofres: tocalos para ver qué guardan</span>`;
   svg.innerHTML = PLAN_BASE + boxes + pins;
 }
 $("plan").addEventListener("click", ev => {
@@ -368,14 +382,15 @@ function renderRecipe() {
     (h ? `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>` : "") + lv +
     `<div class="muted" style="font: .9rem var(--ui)">En: ${esc(station(r, q))}</div>` +
     `<div class="need">` + needs(r, q).map(([i, n]) => { const hi = have(i);
-      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${NN(i)}<small>${hi ? "tocá para ver dónde está" : "no hay en los cofres"}</small></span>` +
+      const col = colorOf(i);
+      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${col ? `<i class="dot" style="background:${col}"></i>` : ""}${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
         `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
     (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "") +
     `<p class="note"><b class="${m ? "miss" : "ok"}">${m ? (r.one ? "No hay ninguno guardado." : `Falta${m > 1 ? "n" : ""} ${m} ${m > 1 ? "cosas" : "cosa"}.`) : "Hay todo en los cofres."}</b></p>`;
 }
 $("recipe").onclick = e => {
   const c = e.target.closest("[data-q]"), b = e.target.closest("[data-back]"), it = e.target.closest("[data-p]");
-  if (c) { state.lvl = +c.dataset.q; renderRecipe(); }
+  if (c) { state.lvl = +c.dataset.q; renderRecipe(); renderPlan(); }
   else if (b) { const p = b.dataset.back; state.back = null; select(p, false); }
   else if (it) { state.back = state.sel; select(it.dataset.p, false); }
 };
