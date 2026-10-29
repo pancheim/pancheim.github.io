@@ -32,15 +32,6 @@ SHAPES = {
     "iron_wall_1x1": ("wall_iron", 1, 0.25), "iron_wall_2x2": ("wall_iron", 2, 0.25), "iron_grate": ("wall_iron", 1, 0.25),
 }
 STAKES = {"stake_wall": 2, "piece_sharpstakes": 2}
-# Techos: (largo, cuanto ocupa visto desde arriba en la direccion de la pendiente). Los de cumbrera no
-# tienen pendiente propia. El plano los dibuja aparte, con sombra segun hacia donde cae cada faldon.
-_c = lambda deg: round(2 * math.cos(math.radians(deg)), 2)
-ROOFS = {"wood_roof": (2, _c(26.57), True), "wood_roof_45": (2, _c(45), True), "wood_roof_67": (2, _c(67.5), True),
-         "darkwood_roof": (2, _c(26.57), True), "darkwood_roof_45": (2, _c(45), True),
-         "wood_roof_top": (2, 1.2, False), "wood_roof_top_45": (2, 1, False), "darkwood_roof_top": (2, 1.2, False),
-         "darkwood_roof_top_45": (2, 1, False), "wood_roof_ocorner": (2, 2, True), "wood_roof_ocorner_45": (2, 2, True),
-         "wood_roof_icorner": (2, 2, True), "wood_roof_icorner_45": (2, 2, True)}
-LIGHT = (-math.sqrt(.5), math.sqrt(.5))   # hacia la luz, en (x, z): del noroeste
 # Marcas sueltas: estaciones y cosas del lugar. tipo -> prefabs.
 MARKS = {
     "fire": ("hearth", "bonfire", "fire_pit"),
@@ -103,7 +94,6 @@ class Plan:
         self.cx, self.cz, self.r2 = cx, cz, radius ** 2
         self.layers = {k: [] for k in LAYERS}
         self.marks = []
-        self.roofs = []
         self.pts = []
 
     def add(self, prefab, pos, yaw):
@@ -122,14 +112,6 @@ class Plan:
             elif layer in ("floor_stone", "floor_marble"):   # baldosas de un metro
                 n = round(length)
                 self.layers["grout"] += [(y, l) for l in _lines(x, z, yaw, length, width, n, n)]
-        elif prefab in ROOFS:
-            length, depth, sloped = ROOFS[prefab]
-            poly = _rect(x, z, yaw, length, depth)
-            t = math.radians(yaw or 0)
-            # la pendiente cae hacia -b (eje del ancho de la pieza); de 0 (a la sombra) a 3 (al sol)
-            facing = -(math.sin(t) * LIGHT[0] + math.cos(t) * LIGHT[1]) if sloped else 0
-            self.roofs.append((y, min(3, int((facing + 1) * 2)) if sloped else 4,
-                               " ".join(f"{px:.1f} {-pz:.1f}" for px, pz in poly)))
         elif prefab in STAKES:            # troncos en fila
             at, n = _local(x, z, yaw), 5
             for i in range(n):
@@ -152,5 +134,4 @@ class Plan:
             layers[name] = _path([p for _, p in polys], close=name not in ("plank", "grout"))
         return {"box": [round(min(xs) - 4, 1), round(-max(zs) - 4, 1),
                         round(max(xs) - min(xs) + 8, 1), round(max(zs) - min(zs) + 8, 1)],
-                "layers": layers, "marks": [m for m in self.marks if near(m[1], m[2])],
-                "roofs": [[k, pts] for _, k, pts in sorted(self.roofs)]}
+                "layers": layers, "marks": [m for m in self.marks if near(m[1], m[2])]}

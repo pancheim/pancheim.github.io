@@ -45,6 +45,9 @@ BASE_RADIUS = float(os.environ.get("BASE_RADIUS", 150))
 # El plano dibuja lo construido a menos de PLAN_RADIUS metros del centro de la base.
 PLAN_RADIUS = float(os.environ.get("PLAN_RADIUS", 110))
 ART = timezone(timedelta(hours=-3))
+TROPHY = {"Eikthyr": "TrophyEikthyr", "El Anciano": "TrophyTheElder", "Bonemass": "TrophyBonemass",
+          "Moder": "TrophyDragonQueen", "Yagluth": "TrophyGoblinKing", "La Reina": "TrophySeekerQueen",
+          "Fader": "TrophyFader"}
 
 
 def name_es(prefab):
@@ -94,6 +97,9 @@ def build(world_dir):
     stored = historial.totals(containers)
     world = world.summary(stored)
     used.update(b["item"] for b in world["bosses"])
+    for b in world["bosses"]:   # el trofeo de cada jefe, para la fila de arriba de la pagina
+        b["trophy"] = TROPHY.get(b["name"])
+    used.update(t for t in TROPHY.values())
     return {"saved": saved.isoformat(timespec="minutes"),
             "built": datetime.now(ART).isoformat(timespec="minutes"),
             "containers": containers, "stations": stations, "plan": plan.to_json(), "world": world,
