@@ -441,7 +441,6 @@ function renderRecipe() {
   const q = Math.min(state.lvl, r.maxq), h = have(p);
   const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
     `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejorar a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
-  const m = missing(r, q);
   $("recipe").innerHTML = back + `<h3>Para fabricarlo${r.n > 1 ? ` (salen ${r.n})` : ""}</h3>` +
     (h ? `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>` : "") + lv +
     `<div class="muted" style="font: .9rem var(--ui)">En: ${esc(station(r, q))}</div>` +
@@ -449,8 +448,7 @@ function renderRecipe() {
       const col = colorOf(i);
       return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${col ? `<i class="dot" style="background:${col}"></i>` : ""}${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
         `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
-    (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "") +
-    `<p class="note"><b class="${m ? "miss" : "ok"}">${m ? (r.one ? "No hay ninguno guardado." : `Falta${m > 1 ? "n" : ""} ${m} ${m > 1 ? "cosas" : "cosa"}.`) : "Hay todo en los cofres."}</b></p>`;
+    (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "");
 }
 $("recipe").onclick = e => {
   const c = e.target.closest("[data-q]"), b = e.target.closest("[data-back]"), it = e.target.closest("[data-p]");
