@@ -202,6 +202,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
     <div class="forge">
       <div class="picker panel">
         <input class="search" id="rq" type="search" placeholder="Fabricar: maza, coraza, hidromiel…" aria-label="Buscar receta">
+        <div class="row" id="rfilter"></div>
         <div class="items" id="rlist" role="list"></div>
       </div>
       <div class="recipe panel" id="recipe"></div>
@@ -472,13 +473,16 @@ const have = p => (STOCK.get(p) || { total: 0 }).total;
 const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
 const missing = (r, q) => needs(r, q).filter(([p, n]) => have(p) < n).length;
 const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
-let rsel = { i: null, q: 1, text: "" };
+let rsel = { i: null, q: 1, text: "", f: "todo" };
+const RF = { todo: "Todo", puede: "Se puede", falta: "Falta algo" };
 try { const s = JSON.parse(localStorage.getItem("arcon-falta") || "null"); if (s) rsel.i = RC && RC.recetas.findIndex(r => r.out === s.out); if (rsel.i < 0) rsel.i = null; } catch (e) {}
 function renderRecipes() {
   const q = norm(rsel.text.trim());
-  const rows = RC.recetas.map((r, i) => ({ r, i, m: missing(r, 1) }))
-    .filter(({ r }) => !q || norm(N(r.out)).includes(q) || norm(r.out).includes(q))
-    .sort((a, b) => a.m - b.m || N(a.r.out).localeCompare(N(b.r.out), "es")).slice(0, q ? 80 : 40);
+  const all = RC.recetas.map((r, i) => ({ r, i, m: missing(r, 1) }));
+  const n = { todo: all.length, puede: all.filter(x => !x.m).length, falta: all.filter(x => x.m).length };
+  $("rfilter").innerHTML = Object.entries(RF).map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${rsel.f === k}">${l} · ${n[k]}</button>`).join("");
+  const rows = all.filter(({ r, m }) => (rsel.f === "todo" || (rsel.f === "puede") === !m) && (!q || norm(N(r.out)).includes(q) || norm(r.out).includes(q)))
+    .sort((a, b) => N(a.r.out).localeCompare(N(b.r.out), "es"));
   $("rlist").innerHTML = rows.map(({ r, i, m }) =>
     `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${esc(N(r.out))}<small>${esc(station(r, 1))}</small></span>` +
     `<span class="num ${m ? "miss" : "ok"}">${m ? `faltan ${m}` : "se puede"}</span></button>`).join("") || `<div class="empty">No hay recetas con ese nombre (o piden algo que todavía no pasó por el arcón).</div>`;
@@ -507,6 +511,7 @@ if (RC) {
     if (c) { rsel.q = +c.dataset.q; renderRecipe(); }
     else if (it && STOCK.has(it.dataset.p)) { select(it.dataset.p, false); $("buscar").scrollIntoView({ behavior: "smooth", block: "start" }); }
   };
+  $("rfilter").onclick = e => { const b = e.target.closest("[data-f]"); if (b) { rsel.f = b.dataset.f; renderRecipes(); } };
   $("rq").addEventListener("input", e => { rsel.text = e.target.value; renderRecipes(); });
   renderRecipes(); renderRecipe();
 } else document.querySelector('nav.jump [href="#falta"]').remove();
