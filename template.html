@@ -120,15 +120,16 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .plan .walls { filter: drop-shadow(.25px .35px 0 rgba(0, 0, 0, .45)); }
 .plan .box { fill: #a8763d; stroke: #2a1b11; stroke-width: .25; }
 .plan .box.open { fill: #faf9f8; fill-opacity: 1; }
-.plan .hit { fill: var(--gold); stroke: #1a0f08; stroke-width: .45; }
-.plan .halo { fill: var(--gold); fill-opacity: .18; stroke: var(--gold); stroke-width: .35; pointer-events: none; }
-.plan .hit.open { fill: #fff3c4; }
-.plan .tag { font: 700 2.1px var(--ui); fill: #1a0f08; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
-.legend { color: var(--muted); font: .82rem var(--ui); display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
-.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border: 1px solid #1a0f08; }
-.legend .g { background: var(--gold); border-radius: 50%; }
-.need .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; border: 1px solid #1a0f08; }
-.legend .c { background: rgba(244, 187, 115, .75); }
+/* Pines con el ícono del item y cuánto hay; lo elegido con borde dorado. Al pasar por un ingrediente, se apaga el resto. */
+.plan .pin { transition: opacity .15s; cursor: default; }
+.plan .disc { fill: #2b221b; stroke: #e8dcc8; stroke-width: .35; filter: drop-shadow(0 .3px .4px rgba(0, 0, 0, .7)); }
+.plan .pin.main .disc { stroke: var(--gold); stroke-width: .55; }
+.plan .badge { fill: #1a0f08; stroke: #e8dcc8; stroke-width: .15; }
+.plan .pin.main .badge { stroke: var(--gold); }
+.plan .tag { font: 700 1.5px var(--ui); fill: #fff3c4; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.plan.focus .pin:not(.on) { opacity: .2; }
+.plan .pin.on .disc { stroke: var(--gold); }
+.need button.on .n { color: var(--gold); }
 
 .contents { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 3px 18px; padding: 4px 0 6px; }
 .contents button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 8px; justify-content: space-between; border-top: 1px solid rgba(255, 214, 160, .07); padding-top: 3px; }
@@ -227,7 +228,6 @@ select.search { padding: 7px 10px; font-size: .9rem; }
       <div class="board-head panel" id="board-head"></div>
       <div class="board">
         <div class="plan"><svg id="plan" role="img" aria-label="Plano de la base, norte arriba"></svg></div>
-        <div class="legend" id="legend"></div>
       </div>
       <div class="side recipe panel" id="recipe"></div>
       <div class="panel hist" id="historial">
@@ -390,14 +390,13 @@ function planBase() {
     of(["table", "forge", "furnace", "cauldron", "bed", "hive", "barrel", "wheel", "portal", "fire", "torch", "windmill", "tree"]);
 }
 // Qué se marca en el plano: lo elegido (dorado) y lo que pide su receta, cada cosa con su color.
-const COLORS = ["#6ec6ff", "#ff8a65", "#c5a3ff", "#8bd17c", "#ff8fc0", "#ffe08a"];
+// Qué se marca: lo elegido (borde dorado) y lo que pide su receta. Cada pin lleva el ícono del item.
 function targets() {
   const p = state.sel, r = p && RECIPE.get(p), out = [];
-  if (p && STOCK.has(p)) out.push({ p, col: "#f2cc2a" });
-  if (r) needs(r, Math.min(state.lvl, r.maxq)).forEach(([i], k) => { if (STOCK.has(i) && i !== p) out.push({ p: i, col: COLORS[k % COLORS.length] }); });
+  if (p && STOCK.has(p)) out.push({ p, main: true });
+  if (r) needs(r, Math.min(state.lvl, r.maxq)).forEach(([i]) => { if (STOCK.has(i) && i !== p) out.push({ p: i }); });
   return out;
 }
-const colorOf = i => (targets().find(t => t.p === i) || {}).col;
 function renderPlan() {
   const svg = $("plan");
   if (!P) { svg.outerHTML = `<div class="empty">No hay plano de la base.</div>`; return; }
@@ -419,16 +418,30 @@ function renderPlan() {
   });
   const label = n => n >= 1000 ? Math.round(n / 100) / 10 + "k" : n;
   const pins = groups.map(({ x, y, cis, hits }) => [...hits].map(([ti, n], k, all) => {
-    const a = 2 * Math.PI * k / all.length, d = all.length > 1 ? 2.2 : 0, cx = x + d * Math.sin(a), cy = y - d * Math.cos(a), r = T.length > 1 ? 1.8 : 2.4;
-    return `<circle class="halo" cx="${cx}" cy="${cy}" r="${r + 1.2}" style="fill:${T[ti].col};stroke:${T[ti].col}"/>` +
-      `<circle class="hit" cx="${cx}" cy="${cy}" r="${r}" style="fill:${T[ti].col}"><title>${esc(N(T[ti].p))}: ${fmt(n)}</title></circle>` +
-      `<text class="tag" x="${cx}" y="${cy}">${label(n)}</text>`;
+    // El tamaño del pin acompaña al zoom del plano: unos 22 px en pantalla.
+    const r = Math.max(2.1, planView()[2] / 40), a = 2 * Math.PI * k / all.length, d = all.length > 1 ? r * 1.25 : 0;
+    const cx = x + d * Math.sin(a), cy = y - d * Math.cos(a), t = T[ti], bh = r, fs = r * .72;
+    const img = ICONS.has(t.p) ? `<image href="icons/${encodeURIComponent(t.p)}.png" x="${cx - r * .8}" y="${cy - r * .8}" width="${r * 1.6}" height="${r * 1.6}"/>` : "";
+    const lbl = String(label(n)), bw = bh * .55 + lbl.length * fs * .58;
+    return `<g class="pin${t.main ? " main" : ""}" data-p="${esc(t.p)}"><title>${esc(N(t.p))}: ${fmt(n)}</title>` +
+      `<circle class="disc" cx="${cx}" cy="${cy}" r="${r}" style="stroke-width:${r * .16}"/>${img}` +
+      `<rect class="badge" x="${cx + r * .35}" y="${cy + r * .3}" width="${bw}" height="${bh}" rx="${bh / 2}" style="stroke-width:${r * .07}"/>` +
+      `<text class="tag" x="${cx + r * .35 + bw / 2}" y="${cy + r * .3 + bh / 2}" style="font-size:${fs}px">${lbl}</text></g>`;
   }).join("")).join("");
-  $("legend").innerHTML = (T.length ? T.map(t => `<span><i class="g" style="background:${t.col}"></i>${esc(N(t.p))}</span>`).join("") : "") +
-    `<span><i class="c"></i>Otros cofres</span>`;
   svg.innerHTML = PLAN_BASE + boxes + pins;
 }
 
+// Resaltar: pasar por un ingrediente prende sus pines (y al revés, pasar por un pin marca su fila).
+function focusItem(p) {
+  const plan = document.querySelector(".plan");
+  plan.classList.toggle("focus", !!p);
+  document.querySelectorAll("#plan .pin").forEach(g => g.classList.toggle("on", g.dataset.p === p));
+  document.querySelectorAll("#recipe .need button").forEach(b => b.classList.toggle("on", b.dataset.p === p));
+}
+$("recipe").addEventListener("pointerover", e => { const b = e.target.closest(".need [data-p]"); focusItem(b ? b.dataset.p : null); });
+$("recipe").addEventListener("pointerleave", () => focusItem(null));
+$("plan").addEventListener("pointerover", e => { const g = e.target.closest(".pin"); focusItem(g ? g.dataset.p : null); });
+$("plan").addEventListener("pointerleave", () => focusItem(null));
 const outside = e => [...e.at].reduce((t, [ci, n]) => t + (inPlan(BOXES[ci]) ? 0 : n), 0);
 function renderBoardHead() {
   const p = state.sel, e = p && STOCK.get(p);
@@ -447,8 +460,7 @@ function renderRecipe() {
     (h ? `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>` : "") + lv +
     `<div class="muted" style="font: .9rem var(--ui)">En: ${esc(station(r, q))}</div>` +
     `<div class="need">` + needs(r, q).map(([i, n]) => { const hi = have(i);
-      const col = colorOf(i);
-      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${col ? `<i class="dot" style="background:${col}"></i>` : ""}${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
+      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
         `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
     (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "");
 }
