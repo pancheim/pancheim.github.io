@@ -88,14 +88,24 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .board-head .t { display: grid; flex: 1 1 200px; min-width: 0; }
 .board-head .t b { font: 700 1.15rem var(--ui); color: var(--gold); }
 .board-head .t span { color: var(--muted); font: .88rem var(--ui); }
-.plan { border: 3px solid var(--frame); border-radius: 4px; background: #1b2a30; box-shadow: inset 0 0 24px rgba(0, 0, 0, .7), 0 6px 18px rgba(0, 0, 0, .55); overflow: hidden; position: relative; }
+.plan { border: 3px solid var(--frame); border-radius: 4px; background: #56703a; box-shadow: inset 0 0 24px rgba(0, 0, 0, .7), 0 6px 18px rgba(0, 0, 0, .55); overflow: hidden; position: relative; }
 .plan svg { display: block; width: 100%; height: min(64vh, 600px); touch-action: manipulation; }
-.plan .floor_wood { fill: #8a6440; stroke: #2a1b11; stroke-width: .15; }
-.plan .floor_stone { fill: #7d7a73; stroke: #2a1b11; stroke-width: .15; }
-.plan .wall_wood { fill: #d9b98c; }
-.plan .wall_stone { fill: #c9c4ba; }
-.plan .stake { fill: #9b7a4f; }
-.plan .box { fill: #f4bb73; fill-opacity: .75; stroke: #1a0f08; stroke-width: .3; }
+/* Colores de Valheim: madera, piedra, mármol negro, pasto de las Praderas. */
+.plan .soil { fill: #4b3423; }
+.plan .floor_wood { fill: #9a7148; stroke: #3a2614; stroke-width: .08; }
+.plan .floor_stone { fill: #8f8b80; stroke: #4f4b44; stroke-width: .08; }
+.plan .floor_marble { fill: #3b3e44; stroke: #1f2125; stroke-width: .08; }
+.plan .plank { fill: none; stroke: #5b3d22; stroke-width: .07; stroke-opacity: .8; }
+.plan .grout { fill: none; stroke: #4f4b44; stroke-width: .06; stroke-opacity: .7; }
+.plan .rug { fill: #c2ab8a; stroke: #7a6248; stroke-width: .08; }
+.plan .wall_stone { fill: #c4beb2; stroke: #4a463f; stroke-width: .08; }
+.plan .wall_marble { fill: #2a2d32; stroke: #15171a; stroke-width: .08; }
+.plan .wall_iron { fill: #5b6166; }
+.plan .wall_wood { fill: #6e4b2a; stroke: #2a1b11; stroke-width: .08; }
+.plan .beam { fill: #5b3d22; }
+.plan .stake { fill: #8a6538; stroke: #3a2614; stroke-width: .06; }
+.plan .walls { filter: drop-shadow(.25px .35px 0 rgba(0, 0, 0, .45)); }
+.plan .box { fill: #a8763d; stroke: #2a1b11; stroke-width: .25; }
 .plan .box.open { fill: #faf9f8; fill-opacity: 1; }
 .plan .hit { fill: var(--gold); stroke: #1a0f08; stroke-width: .45; }
 .plan .halo { fill: var(--gold); fill-opacity: .18; stroke: var(--gold); stroke-width: .35; pointer-events: none; }
@@ -147,7 +157,7 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .finder { grid-template-areas: "list head" "list side" "list board" "list hist"; align-items: stretch; }
 .finder > * { align-self: start; }
 .finder > .picker { align-self: stretch; contain: size; display: flex; flex-direction: column; }
-.picker .items { flex: 1; max-height: none; min-height: 0; }
+.picker .items { flex: 1; max-height: none; min-height: 0; align-content: start; }
 .hist { grid-area: hist; }
 .picker { grid-area: list; } .board-head { grid-area: head; } .side { grid-area: side; } .board { grid-area: board; position: static; }
 .side .back { justify-self: start; }
@@ -223,7 +233,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;"
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const hit = (p, q) => !q || norm(N(p)).includes(q) || norm(E(p)).includes(q) || norm(p).includes(q);
 const TZ = { timeZone: "America/Argentina/Buenos_Aires" };
-const when = d => `${d.toLocaleDateString("es-AR", { ...TZ, day: "numeric", month: "short" })} ${d.toLocaleTimeString("es-AR", { ...TZ, hour: "2-digit", minute: "2-digit" })}`;
+const when = d => `${d.toLocaleDateString("es-AR", { ...TZ, day: "numeric", month: "short" })} ${d.toLocaleTimeString("es-AR", { ...TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
 const day = d => d.toLocaleDateString("es-AR", { ...TZ, day: "numeric", month: "short" });
 
 // Solo lo guardado: cofres, carros y barcos. Las tumbas no.
@@ -242,10 +252,14 @@ BOXES.forEach((c, ci) => {
   }
 });
 
-$("meta").innerHTML =
-  `<span>Guardado del servidor: <b>${when(new Date(D.saved))}</b></span>` +
-  (D.world && D.world.day ? `<span>Día <b>${D.world.day}</b></span>` : "") +
-  `<span><b>${BOXES.length}</b> cofres, carros y barcos</span><span><b>${STOCK.size}</b> cosas distintas guardadas</span>`;
+// Cuánto hace del guardado que muestra la página. Se republica solo si cambió algo en los cofres,
+// así que "hace 5 h" sin que nadie haya jugado quiere decir que sigue al día.
+const ago = ms => { const m = Math.round(ms / 6e4); return m < 1 ? "recién" : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} días`; };
+function renderMeta() {
+  $("meta").innerHTML = `<span title="Se actualiza cuando cambia algo en los cofres: si nadie jugó desde entonces, sigue al día.">Actualizado <b>${ago(Date.now() - new Date(D.saved))}</b> <span class="muted">(${when(new Date(D.saved))})</span></span>` +
+    (D.world && D.world.day ? `<span>Día <b>${D.world.day}</b> en el juego</span>` : "");
+}
+renderMeta(); setInterval(renderMeta, 6e4);
 
 let state = { sel: null, box: null, q: "", cat: "Todo", mode: "todo", range: "30", lvl: 1, back: null };
 try { const s = JSON.parse(localStorage.getItem("arcon-v3") || "null"); if (s) Object.assign(state, { sel: s.sel, cat: s.cat || "Todo", mode: s.mode || "todo", range: s.range || "30" }); } catch (e) {}
@@ -297,6 +311,45 @@ function planView() {
   return VIEW = [Math.min(...xs) - 14, Math.min(...ys) - 14, Math.max(...xs) - Math.min(...xs) + 28, Math.max(...ys) - Math.min(...ys) + 28].map(v => +v.toFixed(1));
 }
 let PLAN_BASE = "";
+// Lo fijo del plano: pasto, pisos, paredes, el lugar y las estaciones (cambia solo con un guardado nuevo).
+const MARK_NAME = { fire: "Fogata", torch: "Antorcha", forge: "Forja", table: "Mesa de trabajo", furnace: "Horno o fundición", cauldron: "Caldero",
+  portal: "Portal", bed: "Cama", hive: "Colmena", barrel: "Fermentador", windmill: "Molino", wheel: "Rueca", rock: "Piedra", tree: "Árbol", bush: "Arbusto", crop: "Huerta" };
+function mark([k, x, y]) {
+  const t = `<title>${MARK_NAME[k] || k}</title>`, c = (r, f, extra = "") => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" ${extra}/>`;
+  const rect = (w, h, f, st = "#2a1b11") => `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx=".15" fill="${f}" stroke="${st}" stroke-width=".1"/>`;
+  switch (k) {
+    case "fire": return `<g>${t}${c(3, "url(#glow)")}${c(.9, "#3a2a1e", 'stroke="#7d7a73" stroke-width=".25"')}${c(.5, "#ff9a2e")}</g>`;
+    case "torch": return `<g>${t}${c(1.6, "url(#glow)")}${c(.22, "#ffd36b")}</g>`;
+    case "forge": return `<g>${t}${rect(1.8, 1.1, "#3d3a36")}${c(.3, "#ff7a2e")}</g>`;
+    case "table": return `<g>${t}${rect(2, 1, "#b8874f")}</g>`;
+    case "furnace": return `<g>${t}${c(2, "url(#glow)")}${c(1, "#7d7a73", 'stroke="#3d3a36" stroke-width=".15"')}${c(.38, "#ff8a2e")}</g>`;
+    case "cauldron": return `<g>${t}${c(.6, "#25211d", 'stroke="#5b6166" stroke-width=".12"')}</g>`;
+    case "portal": return `<g>${t}${c(2.2, "url(#glow)")}${rect(2.6, .5, "#5b3d22")}${c(.35, "#ff6a2e")}</g>`;
+    case "bed": return `<g>${t}${rect(1, 2, "#c2ab8a", "#5b3d22")}</g>`;
+    case "hive": return `<g>${t}${c(.45, "#d6a43a", 'stroke="#6b4a1a" stroke-width=".1"')}</g>`;
+    case "barrel": return `<g>${t}${c(.55, "#8a5e34", 'stroke="#3d3a36" stroke-width=".14"')}</g>`;
+    case "windmill": return `<g>${t}${c(1.2, "#7d7a73", 'stroke="#3d3a36" stroke-width=".15"')}<path d="M${x - 3} ${y}H${x + 3}M${x} ${y - 3}V${y + 3}" stroke="#d8c39a" stroke-width=".35"/></g>`;
+    case "wheel": return `<g>${t}${c(.5, "none", 'stroke="#b8874f" stroke-width=".18"')}</g>`;
+    case "rock": return `<g>${t}<path d="M${x - 1.4} ${y + .3}L${x - .8} ${y - 1}L${x + .5} ${y - 1.2}L${x + 1.4} ${y - .2}L${x + 1} ${y + 1}L${x - .4} ${y + 1.2}Z" fill="#8a877e" stroke="#4f4b44" stroke-width=".15"/></g>`;
+    case "tree": return `<g opacity=".92">${t}${c(2.6, "#2f4a22")}${c(1.7, "#3d5e2a")}</g>`;
+    case "bush": return `<g>${t}${c(.8, "#3f6a2c")}</g>`;
+    case "crop": return c(.22, "#8fc25a");
+  }
+  return "";
+}
+function planBase() {
+  const L = P.layers, path = k => L[k] ? `<path class="${k}" d="${L[k]}"/>` : "", M = P.marks || [];
+  const of = ks => M.filter(m => ks.includes(m[0])).map(mark).join("");
+  const [vx, vy, vw, vh] = planView();
+  return `<defs><filter id="grass" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency=".18" numOctaves="3" seed="3"/>` +
+    `<feColorMatrix values="0 0 0 0 .30  0 0 0 0 .42  0 0 0 0 .20  0 0 0 .55 0"/></filter>` +
+    `<radialGradient id="glow"><stop offset="0" stop-color="#ffb347" stop-opacity=".45"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient></defs>` +
+    `<rect x="${vx - 200}" y="${vy - 200}" width="${vw + 400}" height="${vh + 400}" fill="#56703a"/><rect x="${vx - 200}" y="${vy - 200}" width="${vw + 400}" height="${vh + 400}" filter="url(#grass)"/>` +
+    path("soil") + of(["crop", "bush", "rock"]) +
+    ["floor_stone", "floor_marble", "floor_wood", "grout", "plank", "rug"].map(path).join("") +
+    `<g class="walls">${["wall_stone", "wall_marble", "wall_iron", "wall_wood", "beam", "stake"].map(path).join("")}</g>` +
+    of(["table", "forge", "furnace", "cauldron", "bed", "hive", "barrel", "wheel", "portal", "fire", "torch", "windmill", "tree"]);
+}
 // Qué se marca en el plano: lo elegido (dorado) y lo que pide su receta, cada cosa con su color.
 const COLORS = ["#6ec6ff", "#ff8a65", "#c5a3ff", "#8bd17c", "#ff8fc0", "#ffe08a"];
 function targets() {
@@ -309,7 +362,7 @@ const colorOf = i => (targets().find(t => t.p === i) || {}).col;
 function renderPlan() {
   const svg = $("plan");
   if (!P) { svg.outerHTML = `<div class="empty">No hay plano de la base.</div>`; return; }
-  if (!PLAN_BASE) PLAN_BASE = ["floor_wood", "floor_stone", "stake", "wall_wood", "wall_stone"].map(k => P.layers[k] ? `<path class="${k}" d="${P.layers[k]}"/>` : "").join("");
+  if (!PLAN_BASE) PLAN_BASE = planBase();
   svg.setAttribute("viewBox", planView().join(" "));
   const T = targets(), marked = new Set(T.flatMap(t => [...STOCK.get(t.p).at.keys()]));
   const boxes = BOXES.map((c, ci) => !inPlan(c) || marked.has(ci) ? "" :
