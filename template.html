@@ -472,6 +472,10 @@ const have = p => (STOCK.get(p) || { total: 0 }).total;
 // Lo que pide cada nivel: el 1 es la receta, del 2 en adelante la mejora (el juego multiplica por el nivel - 1).
 const needs = (r, q) => r.res.map(([p, a, per]) => [p, q <= 1 ? a : per * (q - 1)]).filter(([, n]) => n > 0);
 const missing = (r, q) => { const m = needs(r, q).filter(([p, n]) => have(p) < n).length; return r.one ? +(m === needs(r, q).length) : m; };
+// El mejor nivel de cada cosa guardada, para avisar que ya hay antes de fabricar otra.
+const BEST = new Map();
+BOXES.forEach(c => c.items.forEach(([p, , q]) => BEST.set(p, Math.max(BEST.get(p) || 0, q))));
+const already = p => have(p) ? `ya hay ${fmt(have(p))}${BEST.get(p) > 1 ? ` (hasta nivel ${BEST.get(p)})` : ""}` : "";
 const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
 let rsel = { i: null, q: 1, text: "", f: "todo" };
 const RF = { todo: "Todo", puede: "Se puede", falta: "Falta algo" };
@@ -484,7 +488,7 @@ function renderRecipes() {
   const rows = all.filter(({ r, m }) => (rsel.f === "todo" || (rsel.f === "puede") === !m) && (!q || norm(N(r.out)).includes(q) || norm(r.out).includes(q)))
     .sort((a, b) => N(a.r.out).localeCompare(N(b.r.out), "es"));
   $("rlist").innerHTML = rows.map(({ r, i, m }) =>
-    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${esc(N(r.out))}<small>${esc(station(r, 1))}</small></span>` +
+    `<button class="it" role="listitem" data-i="${i}" aria-pressed="${rsel.i === i}">${icon(r.out)}<span class="n">${esc(N(r.out))}<small>${esc(station(r, 1))}${have(r.out) ? ` · <span class="ok">${already(r.out)}</span>` : ""}</small></span>` +
     `<span class="num ${m ? "miss" : "ok"}">${m ? `faltan ${m}` : "se puede"}</span></button>`).join("") || `<div class="empty">No hay recetas con ese nombre (o piden algo que todavía no pasó por el arcón).</div>`;
 }
 function renderRecipe() {
@@ -493,7 +497,8 @@ function renderRecipe() {
   const q = Math.min(rsel.q, r.maxq);
   const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
     `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejora a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
-  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${esc(N(r.out))}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span></div>${lv}` +
+  $("recipe").innerHTML = `<div class="head">${icon(r.out, "lg")}<span class="t"><b>${esc(N(r.out))}${r.n > 1 ? ` ×${r.n}` : ""}</b><span>${esc(station(r, q))}</span></span>${have(r.out) ? `<button class="chip" data-have="${esc(r.out)}">Ver dónde</button>` : ""}</div>` +
+    (have(r.out) ? `<p class="note"><b class="ok">${already(r.out)[0].toUpperCase() + already(r.out).slice(1)} en los cofres.</b> Fijate antes de fabricar uno nuevo.</p>` : "") + `${lv}` +
     `<div class="need">` + needs(r, q).map(([p, n]) => { const h = have(p);
       return `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${esc(N(p))}<small>${h ? "ver en qué cofres" : "no hay en los cofres"}</small></span>` +
         `<span class="q"><b class="${h >= n ? "ok" : "miss"}">${fmt(h)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
@@ -507,9 +512,9 @@ if (RC) {
     document.querySelectorAll("#rlist .it").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.i === rsel.i))); renderRecipe();
     if (matchMedia("(max-width: 820px)").matches) $("recipe").scrollIntoView({ behavior: "smooth", block: "start" }); };
   $("recipe").onclick = e => {
-    const c = e.target.closest("[data-q]"), it = e.target.closest("[data-p]");
+    const c = e.target.closest("[data-q]"), it = e.target.closest("[data-p], [data-have]");
     if (c) { rsel.q = +c.dataset.q; renderRecipe(); }
-    else if (it && STOCK.has(it.dataset.p)) { select(it.dataset.p, false); $("buscar").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else if (it && STOCK.has(it.dataset.p || it.dataset.have)) { select(it.dataset.p || it.dataset.have, false); $("buscar").scrollIntoView({ behavior: "smooth", block: "start" }); }
   };
   $("rfilter").onclick = e => { const b = e.target.closest("[data-f]"); if (b) { rsel.f = b.dataset.f; renderRecipes(); } };
   $("rq").addEventListener("input", e => { rsel.text = e.target.value; renderRecipes(); });
