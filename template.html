@@ -111,7 +111,8 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .plan .halo { fill: var(--gold); fill-opacity: .18; stroke: var(--gold); stroke-width: .35; pointer-events: none; }
 .plan .hit.open { fill: #fff3c4; }
 .plan .tag { font: 700 2.1px var(--ui); fill: #1a0f08; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
-.legend { color: var(--muted); font: .82rem var(--ui); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.legend { color: var(--muted); font: .82rem var(--ui); display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.plan .roofs { filter: drop-shadow(.4px .6px 0 rgba(0, 0, 0, .5)); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border: 1px solid #1a0f08; }
 .legend .g { background: var(--gold); border-radius: 50%; }
 .need .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; border: 1px solid #1a0f08; }
@@ -274,7 +275,7 @@ function renderMeta() {
 }
 renderMeta(); setInterval(renderMeta, 6e4);
 
-let state = { sel: null, box: null, q: "", cat: "Todo", mode: "todo", range: "30", lvl: 1, back: null };
+let state = { sel: null, box: null, q: "", cat: "Todo", mode: "todo", range: "30", lvl: 1, back: null, roofs: false };
 try { const s = JSON.parse(localStorage.getItem("arcon-v3") || "null"); if (s) Object.assign(state, { sel: s.sel, cat: s.cat || "Todo", mode: s.mode || "todo", range: s.range || "30" }); } catch (e) {}
 const remember = () => { try { localStorage.setItem("arcon-v3", JSON.stringify({ sel: state.sel, cat: state.cat, mode: state.mode, range: state.range })); } catch (e) {} };
 
@@ -353,6 +354,13 @@ function mark([k, x, y]) {
   }
   return "";
 }
+// Techos vistos desde arriba: tablas de madera, más claras del lado que mira al sol (noroeste).
+const ROOF_FILL = ["#4a3220", "#634328", "#7e5732", "#9a6d40", "#3a2614"];
+let ROOFS_SVG = "";
+function planRoofs() {
+  return ROOFS_SVG || (ROOFS_SVG = `<g class="roofs">` + (P.roofs || []).map(([k, pts]) =>
+    `<polygon points="${pts}" fill="${ROOF_FILL[k]}" stroke="#24170d" stroke-width=".07"/>`).join("") + `</g>`);
+}
 function planBase() {
   const L = P.layers, path = k => L[k] ? `<path class="${k}" d="${L[k]}"/>` : "", M = P.marks || [];
   const of = ks => M.filter(m => ks.includes(m[0])).map(mark).join("");
@@ -403,12 +411,13 @@ function renderPlan() {
       `<circle class="hit" cx="${cx}" cy="${cy}" r="${r}" style="fill:${T[ti].col}"><title>${esc(N(T[ti].p))}: ${fmt(n)}</title></circle>` +
       `<text class="tag" x="${cx}" y="${cy}">${label(n)}</text>`;
   }).join("")).join("");
-  $("legend").innerHTML = (T.length ? T.map(t => `<span><i class="g" style="background:${t.col}"></i>${esc(N(t.p))}</span>`).join("") : "") +
+  $("legend").innerHTML = (P.roofs && P.roofs.length ? `<button class="chip" id="roofs" aria-pressed="${!!state.roofs}">Techos</button>` : "") + (T.length ? T.map(t => `<span><i class="g" style="background:${t.col}"></i>${esc(N(t.p))}</span>`).join("") : "") +
     `<span><i class="c"></i>Otros cofres</span>`;
-  svg.innerHTML = PLAN_BASE + boxes + pins;
+  svg.innerHTML = PLAN_BASE + (state.roofs ? planRoofs() : boxes) + pins;
 }
 
 const outside = e => [...e.at].reduce((t, [ci, n]) => t + (inPlan(BOXES[ci]) ? 0 : n), 0);
+$("legend").addEventListener("click", e => { if (e.target.closest("#roofs")) { state.roofs = !state.roofs; renderPlan(); } });
 function renderBoardHead() {
   const p = state.sel, e = p && STOCK.get(p);
   $("board-head").innerHTML = p
