@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 import historial
 import registro
+import relieve
 from mundo import World
 from plan import Plan
 from texto import to_json, to_markdown
@@ -167,6 +168,9 @@ def main(world_dir, out_path):
                      for p, n in data["names"].items()}
     out_dir = os.path.dirname(os.path.abspath(out_path))
     data["icons"] = copy_icons(data["names"], os.path.join(out_dir, "icons"))
+    # Fondo del plano: relieve con las murallas y el agua (si esta la altura generada de la base).
+    if data["plan"]:
+        data["plan"]["relieve"] = relieve.render(world_dir, out_dir)
     template = open(os.path.join(ROOT, "template.html"), encoding="utf-8").read()
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     os.makedirs(out_dir, exist_ok=True)

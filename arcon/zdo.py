@@ -71,7 +71,8 @@ def parse_chunk(path):
         z = {}
         fl = r.u16()
         if fl & 0x2000:
-            r.raw(4); z["pos"] = None
+            # posicion corta: la zona (x, z) en dos i16; la usan los objetos de terreno (_TerrainCompiler)
+            z["zone"] = struct.unpack("<hh", r.raw(4)); z["pos"] = None
         else:
             z["pos"] = r.floats(3)
         z["prefab"] = r.u32()

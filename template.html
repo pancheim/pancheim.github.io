@@ -321,7 +321,10 @@ function planView() {
   const pts = BOXES.filter(inPlan).map(c => c.p);
   if (!pts.length) return VIEW = P ? P.box : [0, 0, 1, 1];
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-  return VIEW = [Math.min(...xs) - 14, Math.min(...ys) - 14, Math.max(...xs) - Math.min(...xs) + 28, Math.max(...ys) - Math.min(...ys) + 28].map(v => +v.toFixed(1));
+  // Con relieve se abre hasta ~65 m del centro de los cofres, para que entren las murallas de tierra.
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const half = Math.max((Math.max(...xs) - Math.min(...xs)) / 2 + 14, (Math.max(...ys) - Math.min(...ys)) / 2 + 14, P.relieve ? 65 : 0);
+  return VIEW = [cx - half, cy - half, 2 * half, 2 * half].map(v => +v.toFixed(1));
 }
 let PLAN_BASE = "";
 // Lo fijo del plano: pasto, pisos, paredes, el lugar y las estaciones (cambia solo con un guardado nuevo).
@@ -358,6 +361,8 @@ function planBase() {
     `<feColorMatrix values="0 0 0 0 .30  0 0 0 0 .42  0 0 0 0 .20  0 0 0 .55 0"/></filter>` +
     `<radialGradient id="glow"><stop offset="0" stop-color="#ffb347" stop-opacity=".45"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient></defs>` +
     `<rect x="${vx - 200}" y="${vy - 200}" width="${vw + 400}" height="${vh + 400}" fill="#56703a"/><rect x="${vx - 200}" y="${vy - 200}" width="${vw + 400}" height="${vh + 400}" filter="url(#grass)"/>` +
+    (P.relieve ? `<image href="${P.relieve.href}" x="${P.relieve.box[0]}" y="${P.relieve.box[1]}" width="${P.relieve.box[2]}" height="${P.relieve.box[3]}" preserveAspectRatio="none"/>` +
+      `<rect x="${P.relieve.box[0]}" y="${P.relieve.box[1]}" width="${P.relieve.box[2]}" height="${P.relieve.box[3]}" filter="url(#grass)" opacity=".35"/>` : "") +
     path("soil") + of(["crop", "bush", "rock"]) +
     ["floor_stone", "floor_marble", "floor_wood", "grout", "plank", "rug"].map(path).join("") +
     `<g class="walls">${["wall_stone", "wall_marble", "wall_iron", "wall_wood", "beam", "stake"].map(path).join("")}</g>` +
