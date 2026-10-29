@@ -164,9 +164,13 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 select.search { padding: 7px 10px; font-size: .9rem; }
 @media (min-width: 1300px) {
   .wrap { max-width: 1760px; }
-  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist"; grid-template-rows: auto auto 1fr; }
-  .finder > .board { align-self: stretch; display: flex; flex-direction: column; gap: 10px; }
-  .board .plan { flex: 1; min-height: 460px; }
+  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist"; grid-template-rows: auto minmax(0, 1fr) auto;
+    /* Alto fijo según la pantalla: elegir otra cosa no mueve el plano ni la lista. */
+    height: max(640px, calc(100vh - 150px)); }
+  .finder > .board { align-self: stretch; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .board .plan { flex: 1; min-height: 0; }
+  .finder > .side { align-self: stretch; align-content: start; overflow: auto; min-height: 0; overscroll-behavior: contain; }
+  .hist .chart svg { height: 200px; }
   .board .plan svg { position: absolute; inset: 0; height: 100%; }
 }
 
@@ -205,7 +209,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
       </div>
       <div class="side recipe panel" id="recipe"></div>
       <div class="panel hist" id="historial">
-        <div class="hist-head"><h3>Cómo fue cambiando</h3><div class="row" id="ranges" aria-label="Período"></div></div>
+        <div class="hist-head"><h3>Evolución</h3><div class="row" id="ranges" aria-label="Período"></div></div>
         <div class="hist-head" style="padding-top:0"><div class="stats" id="stats"></div></div>
         <div class="chart" id="chart"></div>
       </div>
