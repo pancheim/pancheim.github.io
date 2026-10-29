@@ -140,6 +140,9 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 820px) {
   .finder { grid-template-columns: minmax(0, 1fr); }
   .board { position: static; }
+  /* Los filtros en un solo renglón que se desliza de costado, así la lista queda a la vista. */
+  #cats { flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 2px 12px 6px; scrollbar-width: none; }
+  #cats .chip { flex: none; }
   .plan svg { height: 52vh; }
   .items { max-height: 38vh; }
   .chart svg { height: 240px; }
