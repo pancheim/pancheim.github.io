@@ -95,10 +95,9 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .plan .wall_wood { fill: #d9b98c; }
 .plan .wall_stone { fill: #c9c4ba; }
 .plan .stake { fill: #9b7a4f; }
-.plan .box { fill: #f4bb73; fill-opacity: .75; stroke: #1a0f08; stroke-width: .3; cursor: pointer; }
-.plan .box:hover { fill-opacity: .9; }
+.plan .box { fill: #f4bb73; fill-opacity: .75; stroke: #1a0f08; stroke-width: .3; }
 .plan .box.open { fill: #faf9f8; fill-opacity: 1; }
-.plan .hit { fill: var(--gold); stroke: #1a0f08; stroke-width: .45; cursor: pointer; }
+.plan .hit { fill: var(--gold); stroke: #1a0f08; stroke-width: .45; }
 .plan .halo { fill: var(--gold); fill-opacity: .18; stroke: var(--gold); stroke-width: .35; pointer-events: none; }
 .plan .hit.open { fill: #fff3c4; }
 .plan .tag { font: 700 2.1px var(--ui); fill: #1a0f08; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
@@ -108,13 +107,6 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .need .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; border: 1px solid #1a0f08; }
 .legend .c { background: rgba(244, 187, 115, .75); }
 
-.places { padding: 6px 14px 10px; display: grid; font: .92rem var(--ui); }
-.places[hidden] { display: none; }
-.places h3 { padding: 6px 0 2px; }
-.places .pl { all: unset; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid rgba(255, 214, 160, .07); }
-.places .pl:hover span:first-child, .places .pl[aria-pressed="true"] span:first-child { color: var(--gold); }
-.places .pl:focus-visible { outline: 2px solid var(--gold); }
-.places div.pl { cursor: default; }
 .contents { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 3px 18px; padding: 4px 0 6px; }
 .contents button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 8px; justify-content: space-between; border-top: 1px solid rgba(255, 214, 160, .07); padding-top: 3px; }
 .contents button:hover .n { color: var(--gold); }
@@ -132,14 +124,6 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .chart .tip { position: absolute; pointer-events: none; background: #1c130d; border: 1px solid var(--bevel); border-radius: 3px; padding: 6px 9px;
   font: .84rem var(--ui); box-shadow: 0 4px 12px rgba(0, 0, 0, .6); white-space: nowrap; transform: translate(-50%, -100%); }
 .chart .tip b { color: var(--gold); font-size: 1rem; }
-.movers { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
-.mv { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 10px; font-family: var(--ui); }
-.mv:hover .n, .mv[aria-pressed="true"] .n { color: var(--gold); }
-.mv[aria-pressed="true"] { border-color: var(--select); }
-.mv:focus-visible { outline: 2px solid var(--gold); }
-.mv .n { overflow-wrap: anywhere; line-height: 1.25; }
-.mv .n small { display: block; color: var(--muted); font-size: .78rem; }
-.mv .d { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- Parte 2: qué me falta ---------- */
 .forge { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
@@ -160,18 +144,26 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .ok { color: var(--green); } .miss { color: var(--red); }
 
 /* Ficha de fabricar: al lado del plano en pantalla ancha, arriba del plano en las medianas. */
-.finder { grid-template-areas: "list head" "list side" "list board" "list hist"; }
+.finder { grid-template-areas: "list head" "list side" "list board" "list hist"; align-items: stretch; }
+.finder > * { align-self: start; }
+.finder > .picker { align-self: stretch; contain: size; display: flex; flex-direction: column; }
+.picker .items { flex: 1; max-height: none; min-height: 0; }
 .hist { grid-area: hist; }
 .picker { grid-area: list; } .board-head { grid-area: head; } .side { grid-area: side; } .board { grid-area: board; position: static; }
 .side .back { justify-self: start; }
 select.search { padding: 7px 10px; font-size: .9rem; }
 @media (min-width: 1300px) {
   .wrap { max-width: 1760px; }
-  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist" "list board ."; grid-template-rows: auto auto auto 1fr; }
+  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist"; grid-template-rows: auto auto 1fr; }
+  .finder > .board { align-self: stretch; display: flex; flex-direction: column; gap: 10px; }
+  .board .plan { flex: 1; min-height: 460px; }
+  .board .plan svg { position: absolute; inset: 0; height: 100%; }
 }
 
 @media (max-width: 820px) {
   .finder { grid-template-columns: minmax(0, 1fr); grid-template-areas: "list" "head" "side" "board" "hist"; }
+  .finder > .picker { contain: none; }
+  .picker .items { max-height: 38vh; }
   .board { position: static; }
   /* Los filtros en un solo renglón que se desliza de costado, así la lista queda a la vista. */
   .plan svg { height: 52vh; }
@@ -189,9 +181,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
     <div class="meta" id="meta"></div>
   </header>
 
-  <section class="part" id="buscar" aria-labelledby="h-buscar">
-    <h2 id="h-buscar">Buscar y fabricar</h2>
-    <p class="lead">Buscá algo y ves dónde está guardado y, si se fabrica, qué te falta.</p>
+  <section class="part" id="buscar" aria-label="Buscar y fabricar">
     <div class="finder">
       <div class="picker panel">
         <input class="search" id="q" type="search" placeholder="Buscar: plata, silver, maza…" aria-label="Buscar">
@@ -202,7 +192,6 @@ select.search { padding: 7px 10px; font-size: .9rem; }
       <div class="board">
         <div class="plan"><svg id="plan" role="img" aria-label="Plano de la base, norte arriba"></svg></div>
         <div class="legend" id="legend"></div>
-        <div class="places panel" id="places"></div>
       </div>
       <div class="side recipe panel" id="recipe"></div>
       <div class="panel hist" id="historial">
@@ -213,12 +202,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
     </div>
   </section>
 
-  <section class="part" aria-labelledby="movers-h">
-    <h2 id="movers-h">Lo que más se movió</h2>
-    <div class="movers" id="movers"></div>
-  </section>
 
-  <p class="note">No cuenta lo que cada uno lleva encima, ni las tumbas, ni los trofeos colgados. Las recetas son solo de cosas que ya pasaron por el arcón: lo que todavía no encontraron no aparece. También en texto: <a href="inventario.md">inventario.md</a> y <a href="inventario.json">inventario.json</a>.</p>
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
@@ -329,7 +313,7 @@ function renderPlan() {
   svg.setAttribute("viewBox", planView().join(" "));
   const T = targets(), marked = new Set(T.flatMap(t => [...STOCK.get(t.p).at.keys()]));
   const boxes = BOXES.map((c, ci) => !inPlan(c) || marked.has(ci) ? "" :
-    `<rect class="box${state.box === ci ? " open" : ""}" data-ci="${ci}" x="${c.p[0] - .8}" y="${c.p[1] - .8}" width="1.6" height="1.6"><title>${esc(c.kind)}</title></rect>`).join("");
+    `<rect class="box" x="${c.p[0] - .8}" y="${c.p[1] - .8}" width="1.6" height="1.6"><title>${esc(c.kind)}</title></rect>`).join("");
   // Cofres apilados (a menos de 1,5 m) van juntos; si un lugar tiene varias cosas marcadas, los pines se abren en ronda.
   const groups = [];
   T.forEach((t, ti) => {
@@ -345,25 +329,20 @@ function renderPlan() {
   const pins = groups.map(({ x, y, cis, hits }) => [...hits].map(([ti, n], k, all) => {
     const a = 2 * Math.PI * k / all.length, d = all.length > 1 ? 2.2 : 0, cx = x + d * Math.sin(a), cy = y - d * Math.cos(a), r = T.length > 1 ? 1.8 : 2.4;
     return `<circle class="halo" cx="${cx}" cy="${cy}" r="${r + 1.2}" style="fill:${T[ti].col};stroke:${T[ti].col}"/>` +
-      `<circle class="hit${cis.includes(state.box) ? " open" : ""}" data-ci="${cis[0]}" cx="${cx}" cy="${cy}" r="${r}" style="fill:${T[ti].col}"><title>${esc(N(T[ti].p))}: ${fmt(n)}</title></circle>` +
+      `<circle class="hit" cx="${cx}" cy="${cy}" r="${r}" style="fill:${T[ti].col}"><title>${esc(N(T[ti].p))}: ${fmt(n)}</title></circle>` +
       `<text class="tag" x="${cx}" y="${cy}">${label(n)}</text>`;
   }).join("")).join("");
   $("legend").innerHTML = (T.length ? T.map(t => `<span><i class="g" style="background:${t.col}"></i>${esc(N(t.p))}</span>`).join("") : "") +
-    `<span><i class="c"></i>Otros cofres: tocalos para ver qué guardan</span>`;
+    `<span><i class="c"></i>Otros cofres</span>`;
   svg.innerHTML = PLAN_BASE + boxes + pins;
 }
-$("plan").addEventListener("click", ev => {
-  const t = ev.target.closest("[data-ci]");
-  state.box = t ? +t.dataset.ci : null;
-  renderPlan(); renderPlaces();
-});
 
 const outside = e => [...e.at].reduce((t, [ci, n]) => t + (inPlan(BOXES[ci]) ? 0 : n), 0);
 function renderBoardHead() {
   const p = state.sel, e = p && STOCK.get(p);
   $("board-head").innerHTML = p
     ? `${icon(p, "lg")}<span class="t"><b>${NN(p)}</b><span>${e ? `${fmt(e.total)} guardado${e.total > 1 ? "s" : ""}${outside(e) ? ` (${fmt(outside(e))} fuera de la base)` : ""}${BEST.get(p) > 1 ? `, el mejor de nivel ${BEST.get(p)}` : ""}` : "No hay guardado"}</span></span>`
-    : `<span class="t"><b>Elegí algo de la lista</b><span>O tocá un cofre del plano para ver qué guarda.</span></span>`;
+    : `<span class="t"><b>Elegí algo de la lista</b><span>Buscalo arriba a la izquierda.</span></span>`;
 }
 function renderRecipe() {
   const p = state.sel, r = p && RECIPE.get(p);
@@ -389,30 +368,13 @@ $("recipe").onclick = e => {
   else if (b) { const p = b.dataset.back; state.back = null; select(p, false); }
   else if (it) { state.back = state.sel; select(it.dataset.p, false); }
 };
-function renderPlaces() {
-  let html = "";
-  if (state.box !== null) {
-    const c = BOXES[state.box], agg = new Map();
-    for (const [p, s] of c.items) agg.set(p, (agg.get(p) || 0) + s);
-    html += `<h3>Este ${esc(c.kind.toLowerCase())} guarda</h3><div class="contents">` +
-      [...agg.entries()].sort((a, b) => b[1] - a[1]).map(([p, n]) =>
-        `<button data-p="${esc(p)}">${icon(p, "sm")}<span class="n">${NN(p)}</span><span class="num">${fmt(n)}</span></button>`).join("") + `</div>`;
-  }
-  $("places").innerHTML = html;
-  $("places").hidden = !html;
-}
-$("places").addEventListener("click", ev => {
-  const pl = ev.target.closest("button.pl"), it = ev.target.closest(".contents [data-p]");
-  if (pl) { state.box = +pl.dataset.ci; renderPlan(); renderPlaces(); }
-  else if (it) { state.back = null; select(it.dataset.p, false); }
-});
 
 function select(p, fromList) {
   if (p !== state.sel) state.lvl = 1;
-  state.sel = p; state.box = null;
+  state.sel = p;
   remember();
   document.querySelectorAll("#items .it").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
-  renderBoardHead(); renderRecipe(); renderPlan(); renderPlaces(); renderHistory();
+  renderBoardHead(); renderRecipe(); renderPlan(); renderHistory();
   if (!fromList) { const b = document.querySelector(`#items .it[data-p="${CSS.escape(p)}"]`); if (b) b.scrollIntoView({ block: "nearest" }); }
   // En el celu el plano queda abajo de la lista: al elegir, bajar hasta el plano.
   else if (booted && matchMedia("(max-width: 820px)").matches) $("board-head").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -440,7 +402,7 @@ function rangeStart() {
 }
 $("ranges").innerHTML = Object.entries(RANGES).map(([k, [l]]) => `<button class="chip" data-r="${k}" aria-pressed="${state.range === k}">${l}</button>`).join("");
 $("ranges").onclick = e => { const b = e.target.closest("[data-r]"); if (!b) return; state.range = b.dataset.r; remember();
-  document.querySelectorAll("#ranges .chip").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.r === state.range))); renderHistory(); renderMovers(); };
+  document.querySelectorAll("#ranges .chip").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.r === state.range))); renderHistory(); };
 
 const SVGNS = "http://www.w3.org/2000/svg";
 function renderChart(p) {
@@ -493,23 +455,11 @@ function renderHistory() {
   $("stats").innerHTML = `<span><b class="${now - v[i0] > 0 ? "plus" : now - v[i0] < 0 ? "minus" : ""}">${sign(now - v[i0])}</b>en ${RANGES[state.range][0].toLowerCase()}</span>` +
     `<span><b>${fmt(Math.max(0, ...seg))}</b>máximo</span><span><b>${fmt(Math.min(...seg))}</b>mínimo</span>`;
   renderChart(p);
-  document.querySelectorAll("#movers .mv").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
 }
-function renderMovers() {
-  if (!RT.length) return;
-  const i0 = rangeStart();
-  const rows = Object.keys(R.items).map(p => { const v = values(p); return { p, now: v[v.length - 1], d: v[v.length - 1] - v[i0] }; })
-    .filter(r => r.d && ["Materiales", "Comida y pociones", "Flechas", "Trofeos"].includes(C(r.p)))
-    .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 12);
-  $("movers-h").textContent = `Lo que más se movió en ${RANGES[state.range][0].toLowerCase()}`;
-  $("movers").innerHTML = rows.map(r => `<button class="mv panel" data-p="${esc(r.p)}" aria-pressed="${state.sel === r.p}">${icon(r.p)}<span class="n">${NN(r.p)}<small>${fmt(r.now)} ahora</small></span><span class="d ${r.d > 0 ? "plus" : "minus"}">${sign(r.d)}</span></button>`).join("")
-    || `<div class="empty">Nada cambió en este período.</div>`;
-}
-$("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; state.back = null; select(b.dataset.p, false); $("board-head").scrollIntoView({ behavior: "smooth", block: "start" }); };
 
-// Arranque: lo último elegido, o lo que más se movió.
-renderCats(); renderItems(); renderMovers();
-if (!state.sel || !STOCK.has(state.sel) && !R.items[state.sel] && !RECIPE.has(state.sel)) { const m = document.querySelector("#movers .mv"); state.sel = m ? m.dataset.p : ([...STOCK.values()].sort((a, b) => b.total - a.total)[0] || {}).p || null; }
+// Arranque: lo último elegido, o lo que más hay.
+renderCats(); renderItems();
+if (!state.sel || !STOCK.has(state.sel) && !R.items[state.sel] && !RECIPE.has(state.sel)) state.sel = ([...STOCK.values()].sort((a, b) => b.total - a.total)[0] || {}).p || null;
 select(state.sel, true);
 booted = true;
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.sel && renderChart(state.sel), 150); });
