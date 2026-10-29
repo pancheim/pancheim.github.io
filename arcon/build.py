@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -29,6 +30,7 @@ _EN = os.path.join(ROOT, "data", "names_en.json")
 NAMES_EN = json.load(open(_EN, encoding="utf-8")) if os.path.exists(_EN) else {}
 # Recetas de items, leidas del juego en la PC (valheim-contexto: tools/recetas.py --exportar).
 RECETAS = os.path.join(ROOT, "data", "recetas.json")
+FICHAS = os.path.join(ROOT, "data", "fichas.json")   # stats, comida, efectos y descripcion de cada item
 
 KIND = {"piece_chest_wood": "Cofre", "piece_chest": "Cofre reforzado", "piece_chest_private": "Cofre personal",
         "piece_chest_blackmetal": "Cofre de metal negro", "Cart": "Carro", "Karve": "Karve",
@@ -138,12 +140,17 @@ def copy_icons(prefabs, dest):
     have = []
     for p in prefabs:
         cached = os.path.join(ICON_CACHE, p + ".png")
-        if not os.path.exists(cached):
+        missing = cached + ".no"   # no existe en la documentacion: no volver a pedirlo en cada armado
+        if not os.path.exists(cached) and not os.path.exists(missing):
             try:
                 with urllib.request.urlopen(ICON_URL.format(p), timeout=20) as r:
                     body = r.read()
                 if body[:8] == b"\x89PNG\r\n\x1a\n":
                     open(cached, "wb").write(body)
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    open(missing, "w").close()
+                continue
             except OSError:
                 continue
         if os.path.exists(cached):
@@ -169,7 +176,11 @@ def main(world_dir, out_path):
         extra = data["recetas"].pop("nombres")
         for r in data["recetas"]["recetas"]:
             for p in (r["out"], *(x[0] for x in r["res"])):
-                data["names"].setdefault(p, NAMES.get(p, {"es": extra.get(p, p), "cat": "Otros"}))
+                data["names"].setdefault(p, NAMES.get(p, {"es": extra.get(p, p), "cat": "Construcción" if r.get("pz") and p == r["out"] else "Otros"}))
+    # Ficha de cada cosa que aparece en la pagina (lo que nunca vieron no tiene ficha: sin spoilers).
+    if os.path.exists(FICHAS):
+        fichas = json.load(open(FICHAS, encoding="utf-8"))
+        data["fichas"] = {p: fichas[p] for p in data["names"] if p in fichas}
     data["names"] = {p: {**n, "en": NAMES_EN[p]} if NAMES_EN.get(p, n["es"]) != n["es"] else n
                      for p, n in data["names"].items()}
     out_dir = os.path.dirname(os.path.abspath(out_path))

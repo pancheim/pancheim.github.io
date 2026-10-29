@@ -165,6 +165,12 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .need .n small { display: block; color: var(--muted); font-size: .78rem; }
 .need .q { text-align: right; font-variant-numeric: tabular-nums; }
 .need .q b { font-weight: 700; }
+.recipe h3 { margin-top: 6px; }
+.recipe .desc { margin: 0; color: var(--muted); font: italic .92rem var(--body); }
+.stats { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; margin: 0; font: .92rem var(--ui); }
+.stats dt { color: #e8dcc8; } .stats dd { margin: 0; text-align: right; color: var(--yellow); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fx { display: grid; gap: 3px; padding: 6px 0; border-top: 1px solid rgba(255, 214, 160, .07); font-family: var(--ui); }
+.fx b { color: var(--amber); } .fx small { color: var(--muted); } .fx p { margin: 0; font-size: .9rem; }
 .ok { color: var(--green); } .miss { color: var(--red); }
 
 /* Ficha de fabricar: al lado del plano en pantalla ancha, arriba del plano en las medianas. */
@@ -184,7 +190,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
 }
 @media (min-width: 1300px) {
   .wrap { max-width: 1760px; }
-  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist"; grid-template-rows: auto minmax(0, 1fr) auto;
+  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "hist board side"; grid-template-rows: auto minmax(0, 1fr) auto;
     /* Ocupa justo lo que queda de la pantalla: elegir otra cosa no mueve el plano ni la lista. */
     flex: 1; min-height: 0; }
   .wrap { height: 100vh; min-height: 640px; box-sizing: border-box; padding-block: 16px; gap: 16px; display: flex; flex-direction: column; }
@@ -193,7 +199,9 @@ select.search { padding: 7px 10px; font-size: .9rem; }
   .finder > .board { align-self: stretch; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
   .board .plan { flex: 1; min-height: 0; }
   .finder > .side { align-self: stretch; align-content: start; overflow: auto; min-height: 0; overscroll-behavior: contain; }
-  .hist .chart svg { height: 200px; }
+  .hist .chart svg { height: 110px; }
+  .hist .hist-head { padding: 8px 12px; gap: 6px 12px; } .hist .stats { gap: 2px 14px; } .hist .stats b { font-size: 1rem; display: inline; margin-right: 4px; } .hist .chart { padding-top: 0; }
+  .finder > .side { grid-row: 2 / span 2; }
   .board .plan svg { position: absolute; inset: 0; height: 100%; }
 }
 
@@ -310,7 +318,7 @@ const missing = (r, q) => { const m = needs(r, q).filter(([p, n]) => have(p) < n
 // El mejor nivel de cada cosa guardada, para avisar que ya hay antes de fabricar otra.
 const BEST = new Map();
 BOXES.forEach(c => c.items.forEach(([p, , q]) => BEST.set(p, Math.max(BEST.get(p) || 0, q))));
-const station = (r, q) => r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
+const station = (r, q) => r.pz ? (r.st ? RC.estaciones[r.st] || r.st : "") : r.st ? `${RC.estaciones[r.st] || r.st} nivel ${r.lvl + q - 1}` : "a mano";
 const craft = p => { const r = RECIPE.get(p); if (!r) return ""; const m = missing(r, 1);
   return m ? `<span class="miss">le ${m === 1 ? "falta 1 cosa" : `faltan ${m} cosas`}</span>` : `<span class="ok">se puede fabricar</span>`; };
 
@@ -417,6 +425,7 @@ function renderPlan() {
     }
   });
   const label = n => n >= 1000 ? Math.round(n / 100) / 10 + "k" : n;
+  // Lo elegido va arriba de sus ingredientes: se dibuja al final.
   const pins = groups.map(({ x, y, cis, hits }) => [...hits].map(([ti, n], k, all) => {
     // El tamaño del pin acompaña al zoom del plano: unos 22 px en pantalla.
     const r = Math.max(2.1, planView()[2] / 40), a = 2 * Math.PI * k / all.length, d = all.length > 1 ? r * 1.25 : 0;
@@ -427,7 +436,7 @@ function renderPlan() {
       `<circle class="disc" cx="${cx}" cy="${cy}" r="${r}" style="stroke-width:${r * .16}"/>${img}` +
       `<rect class="badge" x="${cx + r * .35}" y="${cy + r * .3}" width="${bw}" height="${bh}" rx="${bh / 2}" style="stroke-width:${r * .07}"/>` +
       `<text class="tag" x="${cx + r * .35 + bw / 2}" y="${cy + r * .3 + bh / 2}" style="font-size:${fs}px">${lbl}</text></g>`;
-  }).join("")).join("");
+  })).flat().sort((a, b) => a.includes('class="pin main"') - b.includes('class="pin main"')).join("");
   svg.innerHTML = PLAN_BASE + boxes + pins;
 }
 
@@ -449,20 +458,58 @@ function renderBoardHead() {
     ? `${icon(p, "lg")}<span class="t"><b>${NN(p)}</b><span>${e ? `${fmt(e.total)} guardado${e.total > 1 ? "s" : ""}${outside(e) ? ` (${fmt(outside(e))} fuera de la base)` : ""}${BEST.get(p) > 1 ? `, el mejor de nivel ${BEST.get(p)}` : ""}` : "No hay guardado"}</span></span>`
     : `<span class="t"><b>Elegí algo de la lista</b><span>Buscalo arriba a la izquierda.</span></span>`;
 }
+// Ficha del objeto: descripción, stats del nivel elegido, efectos y receta. Los textos son los del juego.
+const FICHAS = D.fichas || {};
+const DMG = { blunt: "Contundente", slash: "Cortante", pierce: "Perforante", chop: "Tala", pickaxe: "Minería", fire: "Fuego",
+  frost: "Hielo", lightning: "Rayo", poison: "Veneno", spirit: "Espíritu" };
+const DTYPE = { 1: "contundente", 2: "cortante", 4: "perforante", 8: "tala", 16: "minería", 32: "fuego", 64: "hielo", 128: "rayo", 256: "veneno", 512: "espíritu" };
+// Cómo afecta (enum DamageModifier del juego, de memoria: 1 resistente, 2 débil, 3 inmune, 5 muy resistente, 6 muy débil).
+const MODS = { 1: "resistente", 2: "débil", 3: "inmune", 4: "lo ignora", 5: "muy resistente", 6: "muy débil", 7: "algo resistente", 8: "algo débil" };
+const KIND = { uso: "Al usarlo", equipado: "Mientras lo llevás", set: "Con el set completo" };
+const num = v => fmt(Math.round(v * 10) / 10);
+const lvlv = ([a, per], q) => a + per * (q - 1);
+const mins = sec => sec >= 60 ? `${Math.round(sec / 60)} min` : `${sec} s`;
+const resRows = res => res.map(([t, m]) => `<dt>${DTYPE[t] ? DTYPE[t][0].toUpperCase() + DTYPE[t].slice(1) : t}</dt><dd>${MODS[m] || m}</dd>`).join("");
+function statsHTML(f, q) {
+  const rows = [];
+  for (const [k, v] of Object.entries(f.dmg || {})) rows.push([DMG[k] || k, num(lvlv(v, q))]);
+  if (f.blk && f.blk[0]) rows.push(["Bloqueo", num(lvlv(f.blk, q))]);
+  if (f.arm) rows.push(["Armadura", num(lvlv(f.arm, q))]);
+  if (f.dur) rows.push(["Durabilidad", num(lvlv(f.dur, q))]);
+  if (f.food) { const [hp, st, ei, sec, reg] = f.food;
+    if (hp) rows.push(["Vida", num(hp)]); if (st) rows.push(["Aguante", num(st)]); if (ei) rows.push(["Eitr", num(ei)]);
+    if (reg) rows.push(["Regeneración", num(reg) + " por tic"]); if (sec) rows.push(["Dura", mins(sec)]); }
+  if (f.mov) rows.push(["Movimiento", (f.mov > 0 ? "+" : "") + f.mov + " %"]);
+  rows.push(["Peso", num(f.w)]);
+  if (f.st) rows.push(["Pila", f.st]);
+  return `<dl class="stats">${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}${f.res ? resRows(f.res) : ""}</dl>`;
+}
+function effectsHTML(f) {
+  return (f.se || []).map(e => `<div class="fx"><b>${esc(e.n)}</b><small>${KIND[e.k] || ""}${e.k === "set" && f.set ? ` (${f.set} piezas)` : ""}${e.s ? ` · dura ${mins(e.s)}` : ""}</small>` +
+    (e.t ? `<p>${esc(e.t)}</p>` : "") + (e.fx || e.res ? `<dl class="stats">${(e.fx || []).map(([l, v]) => `<dt>${esc(l.replace(" %", ""))}</dt><dd>${v > 0 ? "+" : ""}${num(v)}${l.endsWith("%") ? " %" : ""}</dd>`).join("")}${e.res ? resRows(e.res) : ""}</dl>` : "") + `</div>`).join("");
+}
 function renderRecipe() {
-  const p = state.sel, r = p && RECIPE.get(p);
+  const p = state.sel, r = p && RECIPE.get(p), f = p && FICHAS[p];
   const back = state.back ? `<button class="chip back" data-back="${esc(state.back)}">← Volver a ${esc(N(state.back))}</button>` : "";
-  if (!r) { $("recipe").innerHTML = back + `<h3>Para fabricarlo</h3><div class="empty" style="padding:4px 0">${p ? "No se fabrica, o la receta pide algo que todavía no pasó por el arcón." : "Elegí algo de la lista."}</div>`; return; }
-  const q = Math.min(state.lvl, r.maxq), h = have(p);
-  const lv = r.maxq > 1 ? `<div class="row">` + Array.from({ length: r.maxq }, (_, k) =>
-    `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">${k ? `Mejorar a ${k + 1}` : "Fabricar"}</button>`).join("") + `</div>` : "";
-  $("recipe").innerHTML = back + `<h3>Para fabricarlo${r.n > 1 ? ` (salen ${r.n})` : ""}</h3>` +
-    (h ? `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>` : "") + lv +
-    `<div class="muted" style="font: .9rem var(--ui)">En: ${esc(station(r, q))}</div>` +
-    `<div class="need">` + needs(r, q).map(([i, n]) => { const hi = have(i);
-      return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
-        `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
-    (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "");
+  if (!p) { $("recipe").innerHTML = `<div class="empty">Elegí algo de la lista.</div>`; return; }
+  const maxq = Math.max(r ? r.maxq : 1, 1), q = Math.min(state.lvl, maxq), h = have(p);
+  const lv = maxq > 1 ? `<div class="row lv">` + Array.from({ length: maxq }, (_, k) =>
+    `<button class="chip" data-q="${k + 1}" aria-pressed="${q === k + 1}">Nivel ${k + 1}</button>`).join("") + `</div>` : "";
+  let html = back + lv;
+  if (f && f.d) html += `<p class="desc">${esc(f.d)}</p>`;
+  if (h) html += `<p class="note"><b class="ok">Ya hay ${fmt(h)} guardado${h > 1 ? "s" : ""}${BEST.get(p) > 1 ? `, hasta nivel ${BEST.get(p)}` : ""}.</b> Fijate antes de hacer otro.</p>`;
+  if (f) html += `<h3>Stats${maxq > 1 ? ` · nivel ${q}` : ""}</h3>` + statsHTML(f, q);
+  if (f && f.se) html += `<h3>Efectos</h3>` + effectsHTML(f);
+  if (r) {
+    const what = r.pz ? "Para construirlo" : q > 1 ? `Para mejorarlo a nivel ${q}` : "Para fabricarlo";
+    html += `<h3>${what}${r.n > 1 ? ` (salen ${r.n})` : ""}</h3><div class="muted" style="font: .9rem var(--ui)">${r.pz ? "Con el martillo" + (r.st ? ", cerca de " + esc(RC.estaciones[r.st] || r.st) : "") : "En: " + esc(station(r, q))}</div>` +
+      `<div class="need">` + needs(r, q).map(([i, n]) => { const hi = have(i);
+        return `<button data-p="${esc(i)}">${icon(i, "sm")}<span class="n">${NN(i)}<small>${hi ? "tocá para ver solo esto" : "no hay en los cofres"}</small></span>` +
+          `<span class="q"><b class="${hi >= n ? "ok" : "miss"}">${fmt(hi)}</b> <span class="muted">/ ${fmt(n)}</span></span></button>`; }).join("") + `</div>` +
+      (r.one ? `<p class="note">Alcanza con uno de estos.</p>` : "");
+  }
+  if (!f && !r) html += `<div class="empty" style="padding:4px 0">No hay ficha ni receta para esto.</div>`;
+  $("recipe").innerHTML = html;
 }
 $("recipe").onclick = e => {
   const c = e.target.closest("[data-q]"), b = e.target.closest("[data-back]"), it = e.target.closest("[data-p]");
@@ -511,7 +558,7 @@ function renderChart(p) {
   const box = $("chart");
   if (!RT.length) { box.innerHTML = `<div class="empty">Todavía no hay registro.</div>`; return; }
   const v = values(p), i0 = rangeStart(), i1 = RT.length - 1;
-  const W = Math.max(320, box.clientWidth - 12), H = box.clientWidth < 600 ? 180 : 220;
+  const W = Math.max(320, box.clientWidth - 12), H = box.clientWidth < 420 ? 110 : box.clientWidth < 600 ? 180 : 220;
   const pad = { l: 52, r: 16, t: 14, b: 28 };
   const t0 = i0 === i1 ? RT[i0] - 864e5 : RT[i0], t1 = RT[i1];
   let ymax = Math.max(1, ...v.slice(i0));
