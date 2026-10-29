@@ -123,12 +123,12 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- Parte 2: historial ---------- */
 .hist-head { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
-.hist-head .t { display: flex; align-items: center; gap: 12px; flex: 1 1 240px; min-width: 0; }
-.hist-head .t b { font: 700 1.25rem var(--ui); color: var(--gold); overflow-wrap: anywhere; }
+.hist-head h3 { flex: 1 1 auto; }
+.hist[hidden] { display: none; }
 .stats { display: flex; flex-wrap: wrap; gap: 6px 22px; font: .82rem var(--ui); color: var(--muted); }
 .stats b { display: block; font: 700 1.2rem var(--ui); color: var(--yellow); font-variant-numeric: tabular-nums; }
 .chart { padding: 10px 6px 4px; position: relative; }
-.chart svg { display: block; width: 100%; height: 300px; }
+.chart svg { display: block; width: 100%; height: 220px; }
 .chart .tip { position: absolute; pointer-events: none; background: #1c130d; border: 1px solid var(--bevel); border-radius: 3px; padding: 6px 9px;
   font: .84rem var(--ui); box-shadow: 0 4px 12px rgba(0, 0, 0, .6); white-space: nowrap; transform: translate(-50%, -100%); }
 .chart .tip b { color: var(--gold); font-size: 1rem; }
@@ -160,22 +160,23 @@ nav.jump { display: flex; flex-wrap: wrap; gap: 8px; }
 .ok { color: var(--green); } .miss { color: var(--red); }
 
 /* Ficha de fabricar: al lado del plano en pantalla ancha, arriba del plano en las medianas. */
-.finder { grid-template-areas: "list head" "list side" "list board"; }
+.finder { grid-template-areas: "list head" "list side" "list board" "list hist"; }
+.hist { grid-area: hist; }
 .picker { grid-area: list; } .board-head { grid-area: head; } .side { grid-area: side; } .board { grid-area: board; position: static; }
 .side .back { justify-self: start; }
 select.search { padding: 7px 10px; font-size: .9rem; }
 @media (min-width: 1300px) {
   .wrap { max-width: 1760px; }
-  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side"; }
+  .finder { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 400px); grid-template-areas: "list head head" "list board side" "list board hist" "list board ."; grid-template-rows: auto auto auto 1fr; }
 }
 
 @media (max-width: 820px) {
-  .finder { grid-template-columns: minmax(0, 1fr); grid-template-areas: "list" "head" "side" "board"; }
+  .finder { grid-template-columns: minmax(0, 1fr); grid-template-areas: "list" "head" "side" "board" "hist"; }
   .board { position: static; }
   /* Los filtros en un solo renglón que se desliza de costado, así la lista queda a la vista. */
   .plan svg { height: 52vh; }
   .items { max-height: 38vh; }
-  .chart svg { height: 240px; }
+  .chart svg { height: 180px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
@@ -186,7 +187,6 @@ select.search { padding: 7px 10px; font-size: .9rem; }
   <header class="panel">
     <h1>Arcón de Pancheim</h1>
     <div class="meta" id="meta"></div>
-    <nav class="jump" aria-label="Partes de la página"><a class="chip" href="#buscar">Buscar y fabricar</a><a class="chip" href="#historial">Historial</a></nav>
   </header>
 
   <section class="part" id="buscar" aria-labelledby="h-buscar">
@@ -205,21 +205,16 @@ select.search { padding: 7px 10px; font-size: .9rem; }
         <div class="places panel" id="places"></div>
       </div>
       <div class="side recipe panel" id="recipe"></div>
+      <div class="panel hist" id="historial">
+        <div class="hist-head"><h3>Cómo fue cambiando</h3><div class="row" id="ranges" aria-label="Período"></div></div>
+        <div class="hist-head" style="padding-top:0"><div class="stats" id="stats"></div></div>
+        <div class="chart" id="chart"></div>
+      </div>
     </div>
   </section>
 
-  <section class="part" id="historial" aria-labelledby="h-hist">
-    <h2 id="h-hist">Historial</h2>
-    <p class="lead">Cuánto había guardado de cada cosa, guardado por guardado. Se anota solo cada vez que cambia algo en los cofres.</p>
-    <div class="panel">
-      <div class="hist-head">
-        <div class="t" id="hist-title"></div>
-        <div class="row" id="ranges" aria-label="Período"></div>
-      </div>
-      <div class="hist-head" style="padding-top:0"><div class="stats" id="stats"></div></div>
-      <div class="chart" id="chart"></div>
-    </div>
-    <h3 id="movers-h">Lo que más se movió</h3>
+  <section class="part" aria-labelledby="movers-h">
+    <h2 id="movers-h">Lo que más se movió</h2>
     <div class="movers" id="movers"></div>
   </section>
 
@@ -367,7 +362,7 @@ const outside = e => [...e.at].reduce((t, [ci, n]) => t + (inPlan(BOXES[ci]) ? 0
 function renderBoardHead() {
   const p = state.sel, e = p && STOCK.get(p);
   $("board-head").innerHTML = p
-    ? `${icon(p, "lg")}<span class="t"><b>${NN(p)}</b><span>${e ? `${fmt(e.total)} guardado${e.total > 1 ? "s" : ""}${outside(e) ? ` (${fmt(outside(e))} fuera de la base)` : ""}${BEST.get(p) > 1 ? `, el mejor de nivel ${BEST.get(p)}` : ""}` : "No hay guardado"}</span></span>${R.items[p] ? `<a class="chip" href="#historial">Historial</a>` : ""}`
+    ? `${icon(p, "lg")}<span class="t"><b>${NN(p)}</b><span>${e ? `${fmt(e.total)} guardado${e.total > 1 ? "s" : ""}${outside(e) ? ` (${fmt(outside(e))} fuera de la base)` : ""}${BEST.get(p) > 1 ? `, el mejor de nivel ${BEST.get(p)}` : ""}` : "No hay guardado"}</span></span>`
     : `<span class="t"><b>Elegí algo de la lista</b><span>O tocá un cofre del plano para ver qué guarda.</span></span>`;
 }
 function renderRecipe() {
@@ -452,7 +447,7 @@ function renderChart(p) {
   const box = $("chart");
   if (!RT.length) { box.innerHTML = `<div class="empty">Todavía no hay registro.</div>`; return; }
   const v = values(p), i0 = rangeStart(), i1 = RT.length - 1;
-  const W = Math.max(320, box.clientWidth - 12), H = box.clientWidth < 600 ? 240 : 300;
+  const W = Math.max(320, box.clientWidth - 12), H = box.clientWidth < 600 ? 180 : 220;
   const pad = { l: 52, r: 16, t: 14, b: 28 };
   const t0 = i0 === i1 ? RT[i0] - 864e5 : RT[i0], t1 = RT[i1];
   let ymax = Math.max(1, ...v.slice(i0));
@@ -492,10 +487,10 @@ function renderChart(p) {
 }
 function renderHistory() {
   const p = state.sel;
-  if (!p) { $("hist-title").innerHTML = `<b>Elegí un recurso arriba o abajo</b>`; $("stats").innerHTML = ""; $("chart").innerHTML = ""; return; }
+  $("historial").hidden = !p || !R.items[p];
+  if ($("historial").hidden) return;
   const v = values(p), i0 = rangeStart(), now = v.length ? v[v.length - 1] : 0, seg = v.slice(i0);
-  $("hist-title").innerHTML = `${icon(p, "lg")}<b>${NN(p)}</b>`;
-  $("stats").innerHTML = `<span><b>${fmt(now)}</b>ahora</span><span><b class="${now - v[i0] > 0 ? "plus" : now - v[i0] < 0 ? "minus" : ""}">${sign(now - v[i0])}</b>en ${RANGES[state.range][0].toLowerCase()}</span>` +
+  $("stats").innerHTML = `<span><b class="${now - v[i0] > 0 ? "plus" : now - v[i0] < 0 ? "minus" : ""}">${sign(now - v[i0])}</b>en ${RANGES[state.range][0].toLowerCase()}</span>` +
     `<span><b>${fmt(Math.max(0, ...seg))}</b>máximo</span><span><b>${fmt(Math.min(...seg))}</b>mínimo</span>`;
   renderChart(p);
   document.querySelectorAll("#movers .mv").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
@@ -510,7 +505,7 @@ function renderMovers() {
   $("movers").innerHTML = rows.map(r => `<button class="mv panel" data-p="${esc(r.p)}" aria-pressed="${state.sel === r.p}">${icon(r.p)}<span class="n">${NN(r.p)}<small>${fmt(r.now)} ahora</small></span><span class="d ${r.d > 0 ? "plus" : "minus"}">${sign(r.d)}</span></button>`).join("")
     || `<div class="empty">Nada cambió en este período.</div>`;
 }
-$("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (b) select(b.dataset.p, false); };
+$("movers").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; state.back = null; select(b.dataset.p, false); $("board-head").scrollIntoView({ behavior: "smooth", block: "start" }); };
 
 // Arranque: lo último elegido, o lo que más se movió.
 renderCats(); renderItems(); renderMovers();
