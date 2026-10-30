@@ -688,7 +688,7 @@ function nearPortal(x, z) {
 const MCATS = [];
 if (PORTALS.length) MCATS.push({ id: "portales", name: "Portales", icon: "portal_wood", pts: PORTALS.map(q => ({ x: q.x, z: q.z, q })) });
 const shipBoxes = D.containers.filter(c => SHIPS.has(c.kind));
-if (shipBoxes.length) MCATS.push({ id: "barcos", name: "Barcos y carros", pts: shipBoxes.map(c => ({ x: c.x, z: c.z, c })) });
+if (shipBoxes.length) MCATS.push({ id: "barcos", name: "Barcos y carros", icon: "Karve", pts: shipBoxes.map(c => ({ x: c.x, z: c.z, c })) });
 const tombBoxes = D.containers.filter(c => c.kind === "Tumba");
 if (tombBoxes.length) MCATS.push({ id: "tumbas", name: "Tumbas", pts: tombBoxes.map(c => ({ x: c.x, z: c.z, c })) });
 Object.entries(BUILT).filter(([p]) => !PORTAL_PREFABS.has(p)).sort(([a], [b]) => N(a).localeCompare(N(b), "es")).forEach(([p, b]) =>

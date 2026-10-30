@@ -141,6 +141,11 @@ def copy_icons(prefabs, dest):
     have = []
     for p in prefabs:
         cached = os.path.join(ICON_CACHE, p + ".png")
+        game = os.path.join(ROOT, "data", "icons", p + ".png")   # construcciones: sacados del juego
+        if os.path.exists(game):
+            shutil.copyfile(game, os.path.join(dest, p + ".png"))
+            have.append(p)
+            continue
         missing = cached + ".no"   # no existe en la documentacion: no volver a pedirlo en cada armado
         if not os.path.exists(cached) and not os.path.exists(missing):
             try:
