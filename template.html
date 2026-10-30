@@ -218,6 +218,9 @@ select.search { padding: 7px 10px; font-size: .9rem; }
 /* ---------- Solapas y mapa del clan ---------- */
 .meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .tabs { display: flex; gap: 6px; }
+#refresh { font-size: .7rem; padding: 3px 8px; }
+#refresh:disabled { opacity: .45; cursor: default; }
+#refresh-msg { font: .8rem var(--ui); }
 .wrap > section[hidden] { display: none !important; }
 .mapgrid { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(280px, 360px); gap: 16px; align-items: stretch; }
 .mapgrid > * { grid-area: auto; }
@@ -248,7 +251,7 @@ select.search { padding: 7px 10px; font-size: .9rem; }
 <div class="wrap">
   <header class="panel">
     <div class="title-row"><h1>Arcón de Pancheim</h1><div class="bosses" id="bosses" aria-label="Jefes"></div></div>
-    <div class="meta-row"><div class="meta" id="meta"></div>
+    <div class="meta-row"><div class="meta"><span id="meta" class="meta"></span><button class="chip" id="refresh" hidden>Actualizar</button><span id="refresh-msg" class="muted"></span></div>
       <nav class="tabs" aria-label="Vista"><button class="chip" data-tab="arcon">Arcón</button><button class="chip" data-tab="mapa">Mapa</button></nav></div>
   </header>
 
@@ -330,6 +333,49 @@ function renderMeta() {
     (D.world && D.world.day ? `<span>Día <b>${D.world.day}</b> en el juego</span>` : "");
 }
 renderMeta(); setInterval(renderMeta, 6e4);
+
+// Botón "Actualizar": le pide al intermediario (Cloudflare Worker, carpeta worker/) que corra la acción.
+// El intermediario también la corre solo cada 30 min. Sin URL configurada, el botón no aparece.
+const WORKER = "https://arcon-pancheim.kvothesson.workers.dev";
+(() => {
+  if (!WORKER) return;
+  const btn = $("refresh"), msg = $("refresh-msg");
+  btn.hidden = false;
+  const say = t => { msg.textContent = t; };
+  async function estado() {
+    try {
+      const e = await (await fetch(WORKER + "/estado")).json();
+      btn.disabled = !e.puede;
+      btn.title = e.corriendo ? "Se está actualizando ahora." : e.puede ? "Baja el último guardado del servidor (tarda unos 3 min)." : `Se actualizó hace ${e.minutos} min: se puede de nuevo a los ${e.espera}.`;
+      return e;
+    } catch (err) { btn.disabled = true; btn.title = "No pude consultar el estado."; return null; }
+  }
+  const publicado = async () => { try { return (await (await fetch("inventario.json?v=" + Date.now())).json()).publicado; } catch (e) { return null; } };
+  btn.onclick = async () => {
+    btn.disabled = true; say("Pidiendo…");
+    const antes = await publicado();
+    let r;
+    try { r = await fetch(WORKER + "/actualizar", { method: "POST" }); } catch (e) { say("No pude pedirlo."); return estado(); }
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) { say(body.motivo || "No se pudo."); return estado(); }
+    say("Actualizando… tarda unos 3 min");
+    const t0 = Date.now();
+    const tick = setInterval(async () => {
+      const e = await estado();
+      if (e && !e.corriendo && Date.now() - t0 > 60000) {
+        clearInterval(tick);
+        // GitHub Pages tarda un poco más en servir lo nuevo después de que termina la acción.
+        setTimeout(async () => {
+          const ahora = await publicado();
+          if (ahora && ahora !== antes) location.reload();
+          else say("Listo: no había nada nuevo en los cofres.");
+        }, 20000);
+      }
+      if (Date.now() - t0 > 10 * 60000) { clearInterval(tick); say("Tardó demasiado: probá recargar en un rato."); }
+    }, 20000);
+  };
+  estado();
+})();
 const BOSSES = (D.world && D.world.bosses) || [], NEXT = BOSSES.find(b => !b.done);
 // Cruz pintada a mano, como la marca del mapa de Valheim: dos pinceladas que se afinan en las puntas.
 const CROSS = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#8b0a0a" fill-opacity=".92" d="M3.2 4.6c3 2.2 6.4 5.6 9.4 8.8 2.6 2.8 5.2 5.4 8 7.4l-.9 1.1c-3-2-5.8-4.6-8.5-7.4C8.4 11.3 5.3 8 2.4 5.6Z` +
