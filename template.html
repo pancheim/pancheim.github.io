@@ -835,7 +835,7 @@ let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() 
 
 
 <script>
-// Panel de Claude Code. Solo existe en el navegador de quien lo habilitó abriendo la página con
+// Chat con Claude. Solo existe en el navegador de quien lo habilitó abriendo la página con
 // #claude (se saca con #sin-claude), y habla con un puente que corre en su propia PC. A los demás
 // no se les agrega nada ni se toca su red local. El panel vive en un iframe de otro origen, así
 // que este script no ve ni maneja la conversación.
@@ -856,35 +856,61 @@ let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() 
     #claude-cerrar { align-self: stretch; font: 700 .8rem var(--ui); color: var(--amber); background: var(--frame); border: 0; padding: 5px 12px; text-align: right; cursor: pointer; }
     #claude-cuerpo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     #claude-cuerpo iframe { flex: 1; width: 100%; border: 0; }
-    #claude-aviso { margin: auto; padding: 24px; text-align: center; color: var(--muted); font: .95rem var(--ui); }`;
+    #claude-aviso { margin: auto; padding: 24px; text-align: center; color: var(--muted); font: .95rem var(--ui); display: grid; gap: 14px; justify-items: center; }
+    #claude-aviso p { margin: 0; }
+    #claude-conectar { font: 700 1rem var(--ui); color: var(--night); background: var(--gold); border-radius: 4px; padding: 9px 18px; text-decoration: none; }`;
   const boton = document.createElement("button");
   boton.id = "claude-boton"; boton.textContent = "Claude";
   const lado = document.createElement("aside");
-  lado.id = "claude-lado"; lado.hidden = true; lado.setAttribute("aria-label", "Claude Code");
+  lado.id = "claude-lado"; lado.hidden = true; lado.setAttribute("aria-label", "Claude");
   const cerrar = document.createElement("button");
   cerrar.id = "claude-cerrar"; cerrar.textContent = "Cerrar ✕";
   const cuerpo = document.createElement("div");
   cuerpo.id = "claude-cuerpo";
   lado.append(cerrar, cuerpo);
   document.body.append(css, lado, boton);
-  let frame = null, listo = false;
+  let frame = null, listo = false, espera = null, reintento = null;
+  const parar = () => { clearTimeout(espera); clearInterval(reintento); };
+  function aviso() {
+    const a = document.createElement("div");
+    a.id = "claude-aviso";
+    const t = document.createElement("p");
+    t.textContent = "El chat está desconectado.";
+    const c = document.createElement("a");
+    c.id = "claude-conectar"; c.href = "puente-claude://abrir"; c.textContent = "Conectar";
+    const n = document.createElement("p");
+    n.textContent = "Solo funciona en la PC donde está instalado el puente. Chrome te va a preguntar si abrir el programa y, la primera vez, si permitís el acceso a la red local: aceptá los dos.";
+    a.append(t, c, n);
+    // Prender el puente tarda un toque: se reintenta hasta que el panel avise que está listo.
+    c.onclick = () => {
+      t.textContent = "Conectando…";
+      let n = 0;
+      clearInterval(reintento);
+      reintento = setInterval(() => {
+        if (++n > 16) { clearInterval(reintento); t.textContent = "No pude conectarlo. La primera vez hay que correr instalar.cmd (carpeta puente-claude). También podés prenderlo con abrir.cmd."; return; }
+        frame.src = PUENTE;
+      }, 2500);
+    };
+    cuerpo.prepend(a);
+  }
+  function iniciar() {
+    parar();
+    listo = false;
+    cuerpo.replaceChildren();
+    frame = document.createElement("iframe");
+    frame.title = "Claude"; frame.src = PUENTE; frame.hidden = true;
+    cuerpo.append(frame);
+    // No se saca el iframe: puede estar esperando que aceptes el permiso de red local del navegador.
+    espera = setTimeout(() => { if (!listo) aviso(); }, 2500);
+  }
   addEventListener("message", ev => {
-    if (ev.origin + "/" === PUENTE && ev.data && ev.data.claudePuente === "listo") { listo = true; cuerpo.querySelector("#claude-aviso")?.remove(); if (frame) frame.hidden = false; }
+    if (ev.origin + "/" !== PUENTE || !ev.data) return;
+    if (ev.data.claudePuente === "listo") { listo = true; parar(); cuerpo.querySelector("#claude-aviso")?.remove(); if (frame) frame.hidden = false; }
+    if (ev.data.claudePuente === "apagado") iniciar();
   });
   boton.onclick = () => {
     lado.hidden = false; boton.hidden = true;
-    if (frame && listo) return;
-    cuerpo.replaceChildren();
-    frame = document.createElement("iframe");
-    frame.title = "Claude Code"; frame.src = PUENTE; frame.hidden = true;
-    cuerpo.append(frame);
-    // No se saca el iframe: puede estar esperando que aceptes el permiso de red local del navegador.
-    setTimeout(() => {
-      if (listo || cuerpo.querySelector("#claude-aviso")) return;
-      const a = document.createElement("p");
-      a.id = "claude-aviso"; a.textContent = "Si el navegador pide permiso para acceder a tu red local, aceptalo. Si no pide nada, el puente está apagado: prendelo con abrir.cmd (carpeta puente-claude), cerrá este panel y volvé a tocar Claude.";
-      cuerpo.prepend(a);
-    }, 3000);
+    if (!(frame && listo)) iniciar();
   };
   cerrar.onclick = () => { lado.hidden = true; boton.hidden = false; };
 })();
