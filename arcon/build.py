@@ -208,7 +208,7 @@ def main(world_dir, out_path):
         json.dump(data["history"], f, ensure_ascii=False, indent=1)
     # Huella del contenido (sin horas): el workflow no republica si es igual a la publicada.
     world = {k: v for k, v in data["world"].items() if k != "day"}   # el dia avanza solo: no cuenta como cambio
-    content = json.dumps({**{k: data[k] for k in ("containers", "stations", "plan", "names")}, "world": world},
+    content = json.dumps({**{k: data[k] for k in ("containers", "stations", "plan", "names", "mapa")}, "world": world},
                          sort_keys=True)
     open(os.path.join(out_dir, "estado.txt"), "w").write(hashlib.sha256(content.encode()).hexdigest() + "\n")
     print(f"{len(data['containers'])} contenedores, {len(data['stations'])} estaciones, "

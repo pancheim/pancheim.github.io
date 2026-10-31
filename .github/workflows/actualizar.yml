@@ -66,14 +66,14 @@ jobs:
           git config user.email "41898783+github-actions[bot]@users.noreply.github.com"
           git commit -qam "Guardado $(tail -n1 registro.jsonl | cut -c7-28)"
           git push -q
-      # En las corridas programadas, si cofres, estaciones y plano son iguales a lo publicado,
-      # no se republica (el servidor guarda aunque nadie juegue). A mano o al subir codigo, siempre.
+      # Si cofres, estaciones, plano y mapa son iguales a lo publicado, no se republica (el servidor
+      # guarda aunque nadie juegue). Vale para el programador y para el Worker; al subir codigo, siempre.
       - name: Ver si cambio algo
         id: diff
         run: |
           nuevo=$(cat site/estado.txt)
           publicado=$(curl -fsL '${{ steps.pages.outputs.base_url }}/estado.txt' || true)
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$nuevo" = "$publicado" ]; then
+          if [ "${{ github.event_name }}" != "push" ] && [ "$nuevo" = "$publicado" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"; echo "Sin cambios desde la ultima publicacion: no se republica."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
