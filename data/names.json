@@ -1325,15 +1325,15 @@
 },
 "DyrnwynBladeFragment": {
 "cat": "Materiales",
-"es": "Dyrnwyn Blade Fragment"
+"es": "Fragmento de espada de Dyrnwyn"
 },
 "DyrnwynHiltFragment": {
 "cat": "Materiales",
-"es": "Dyrnwyn Hilt Fragment"
+"es": "Fragmento de empuñadura de Dyrnwyn"
 },
 "DyrnwynTipFragment": {
 "cat": "Materiales",
-"es": "Dyrnwyn Tip Fragment"
+"es": "Fragmento de punta de Dyrnwyn"
 },
 "Ectoplasm": {
 "cat": "Materiales",
@@ -4577,7 +4577,7 @@
 },
 "UndeadBjornRibcage": {
 "cat": "Materiales",
-"es": "Vile Ribcage"
+"es": "Caja torácica vil"
 },
 "Upgrader0Armor": {
 "cat": "Materiales",
