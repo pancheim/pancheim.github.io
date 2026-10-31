@@ -72,7 +72,7 @@ jobs:
         id: diff
         run: |
           nuevo=$(cat site/estado.txt)
-          publicado=$(curl -fsL '${{ steps.pages.outputs.base_url }}/estado.txt' || true)
+          publicado=$(curl -fsL '${{ steps.pages.outputs.base_url }}/estado.txt?v=${{ github.run_id }}' || true)  # Pages cachea 10 min
           if [ "${{ github.event_name }}" != "push" ] && [ "$nuevo" = "$publicado" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"; echo "Sin cambios desde la ultima publicacion: no se republica."
           else
