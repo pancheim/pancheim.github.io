@@ -28,7 +28,7 @@ BOSSES = [
     ("defeated_dragon", "Moder", "DragonEgg", 3),
     ("defeated_goblinking", "Yagluth", "GoblinTotem", 5),
     ("defeated_queen", "La Reina", "DvergrKey", 1),
-    ("defeated_fader", "Fader", "BellFragment", 3),
+    ("defeated_fader", "Fader", "BellFragment", 9),  # 3 campanas de 3 fragmentos
 ]
 CROPS = {  # lo que se cosecha (ya crecido) y lo que esta creciendo
     "Pickable_Carrot": "Zanahoria", "Pickable_SeedCarrot": "Semillas de zanahoria",
